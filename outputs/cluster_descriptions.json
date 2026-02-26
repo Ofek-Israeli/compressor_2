@@ -1,0 +1,140 @@
+{
+  "0": {
+    "description": "EOS EOT",
+    "example": [
+      "<EOS>",
+      "<EOT>"
+    ]
+  },
+  "1": {
+    "description": "Numbers, arithmetic operations (+, -, *, /), $, %, etc.",
+    "example": [
+      "0",
+      "1",
+      "2",
+      "+",
+      "-",
+      "*",
+      "/",
+      "$",
+      "%",
+      "="
+    ]
+  },
+  "2": {
+    "description": "The cluster consists of repeated instances of the lowercase letter \"a\" with occasional uppercase \"A,\" highlighting uniformity with slight variation.",
+    "example": [
+      "a",
+      "A",
+      "an"
+    ]
+  },
+  "3": {
+    "description": "The cluster focuses on financial terms related to income, particularly \"revenue\" and \"profits,\" indicating a theme centered on business earnings.",
+    "example": [
+      "revenue",
+      "financial",
+      "revenues",
+      "Income",
+      "income",
+      "sales",
+      "Revenue",
+      "cost",
+      "costs",
+      "expenses"
+    ]
+  },
+  "4": {
+    "description": "The cluster revolves around operational and administrative activities within a corporate or industrial context, encompassing aspects such as financial management (P&L, savings), company departments (Activision, Blizzard), environmental and safety concerns (emissions, accidents), and opportunities for improvement and investigation.",
+    "example": [
+      "cash",
+      "operating",
+      "current",
+      "Cash",
+      "assets",
+      "flow",
+      "capital",
+      "company's",
+      "company",
+      "Flow"
+    ]
+  },
+  "5": {
+    "description": "The texts in this cluster all contain repeated occurrences of the acronym \"FY,\" which may represent a focus on fiscal year discussions or abbreviations.",
+    "example": [
+      "FY",
+      "FY:",
+      "FY,",
+      "FY.",
+      "(FY",
+      "(FY):",
+      "FY)",
+      "((FY"
+    ]
+  },
+  "6": {
+    "description": "The cluster consists of instances of the word \"of,\" without additional context or thematic content.",
+    "example": [
+      "of"
+    ]
+  },
+  "7": {
+    "description": "The texts in this cluster are placeholder text excerpts or intentionally left blank, often used for formatting or draft purposes.",
+    "example": [
+      ",",
+      "(,",
+      ",)",
+      "(),",
+      ",,",
+      ",.",
+      ",,.",
+      ",,)",
+      ".,",
+      "(,.)"
+    ]
+  },
+  "8": {
+    "description": "The cluster consists of variations of the word \"to\" used in different contexts, though without specific context provided, making the purpose or theme unclear.",
+    "example": [
+      "to",
+      "To"
+    ]
+  },
+  "9": {
+    "description": "This cluster consists entirely of the word \"the,\" repeated multiple times, with no additional context or theme.",
+    "example": [
+      "the",
+      "The"
+    ]
+  },
+  "10": {
+    "description": "This cluster revolves around mathematical and numerical concepts, focusing on quantities, calculations, and measurements.",
+    "example": [
+      "million",
+      "calculate",
+      "Total",
+      "ratio",
+      "total",
+      "Ratio",
+      "million.",
+      "Average",
+      "approximately",
+      "percentage"
+    ]
+  },
+  "11": {
+    "description": "The cluster seems to focus on discussions or references to agreements, proposals, and reports potentially involving a person or entity named Johnson, with an emphasis on summarizing or understanding these documents.",
+    "example": [
+      "and",
+      ".",
+      "in",
+      "for",
+      "is",
+      "we",
+      "on",
+      "from",
+      "that",
+      "as"
+    ]
+  }
+}

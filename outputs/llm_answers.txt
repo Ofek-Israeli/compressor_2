@@ -1,0 +1,422 @@
+To calculate the FY operating cash flow ratio for Adobe, we need to use the following values:
+
+ Cash from operating activities (FY): ,,
+ Total current liabilities (FY): ,,
+
+Operating cash flow ratio  Cash from operating activities  Total current liabilities
+ ,,  ,,
+≈ .
+
+Rounded to two decimal places, the answer is ..
+
+According to the table, the merchandise inventories are , million and other current assets are  million. 
+
+Therefore, the total amount of inventories for FY is ,    , million.
+
+To calculate the asset turnover ratio for Lockheed Martin in FY, we need to first find the average of their total assets between FY and FY. 
+
+Total assets in FY: ,
+Total assets in FY: ,
+
+Average total assets  (,  ,)  
+ ,
+
+Now we can calculate the asset turnover ratio:
+
+Asset Turnover Ratio  Revenue  Average Total Assets
+ , (FY revenue)  ,
+ .
+
+To calculate the Days Payable Outstanding (DPO) for Corning, we need to follow these steps:
+
+. Calculate the average accounts payable between FY and FY:
+   Average Accounts Payable  (,  ,)  
+   Average Accounts Payable  ,.
+
+. Calculate the change in inventory between FY and FY:
+   Change in Inventory  ,  ,
+   Change in Inventory  
+
+. Calculate the COGS for FY:
+   COGS  ,
+
+. Now we can calculate DPO using the formula provided:
+
+DPO    (Average Accounts Payable)  (COGS  Change in Inventory)
+   (,.)  (,  )
+   (,.)  ,
+   .
+ .
+
+So, the FY DPO for Corning is approximately . days.
+
+To calculate Coca Cola's FY COGS  margin, we need to use the following line items from the Income Statement:
+
+ Net Operating Revenues: ,
+ Cost of goods sold (COGS): ,
+
+First, let's calculate the COGS  margin as a percentage of net operating revenues:
+
+COGS  margin  (COGS  Net Operating Revenues) x 
+ (,  ,) x 
+ .
+
+So, Coca Cola's FY COGS  margin is approximately ..
+
+Based on the provided financial data for American Water Works Company, Inc. as of December , , we can calculate the working capital as follows:
+
+Working Capital  Current Assets  Current Liabilities
+
+Current Assets: , (Total current assets)
+
+Current Liabilities: , (Total current liabilities)
+
+Working Capital  ,  ,  ,
+
+Since the working capital is negative (,), American Water Works Company, Inc. does not have positive working capital based on FY data.
+
+However, it's worth noting that working capital can be a useful metric for some companies, but not necessarily for this one. Working capital represents the difference between a company's current assets and its current liabilities, which is essentially the amount of cash available to pay off debts or invest in new opportunities. For American Water Works, the negative working capital may indicate that the company has more debt than liquid assets, making it challenging to meet its shortterm obligations.
+
+In this case, other metrics such as debttoequity ratio, interest coverage ratio, or return on equity might be more relevant and useful for evaluating the company's financial health.
+
+The shareholder proposal regarding a congruency report on netzero emissions policies was defeated. The "For" votes were ,,, while the "Against" votes were ,,.
+
+To calculate the FY retention ratio, we need to use the following information from the Cash Flow Statement and Income Statement:
+
+ Total cash dividends paid: ,. million
+ Net earnings (attributable to shareholders): ,. million
+
+The retention ratio is calculated as:
+
+Retention Ratio  (Total Cash Dividends Paid  Net Earnings) x 
+
+Plugging in the values, we get:
+
+Retention Ratio  (,. million  ,. million) x 
+Retention Ratio ≈ .
+
+So, the FY retention ratio for General Mills is approximately ..
+
+The text does not explicitly state who the primary customers of Boeing are as of FY. However, it is mentioned that "We derive a significant portion of our revenues from a limited number of commercial airlines" and that "Fleet decisions, airline consolidations or financial challenges involving any of our major commercial airline customers could significantly reduce our revenues and limit our opportunity to generate profits from those customers."
+
+It can be inferred that the primary customers of Boeing are likely the major commercial airlines that purchase their aircraft. However, the text does not provide a specific list of these customers.
+
+In FY,  of Boeing's revenues were earned pursuant to U.S. government contracts, which include FMS through the U.S. government. This suggests that the U.S. government is also a significant customer for Boeing, but it is unclear whether this is the primary source of revenue or if it is part of a broader portfolio of customers.
+
+To calculate the total revenue growth rate, we need to find the difference between the FY and FY revenues, divide it by the FY revenue, and then multiply by .
+
+FY Revenue: ,,
+FY Revenue: ,,
+
+Revenue Growth Rate  ((FY Revenue  FY Revenue)  FY Revenue)  
+ ((,,  ,,)  ,,)  
+ (,,  ,,)  
+ . or .
+
+So, the FY  FY total revenue growth rate for Square is approximately ..
+
+According to the table, Amazon's FY net income is , million.
+
+To calculate the working capital ratio, we need to divide the total current assets by the total current liabilities.
+
+Total current assets: ,.
+Total current liabilities: ,.
+
+Working capital ratio  Total current assets  Total current liabilities
+ ,.  ,.
+ . (rounded to two decimal places)
+
+Therefore, General Mills's FY working capital ratio is ..
+
+To find the cash flow from operating activities for FY, we need to add up the net income and the adjustments provided by operating activities.
+
+Net income for FY is , million.
+
+The adjustment provided by operating activities is:
+
+, (depreciation and amortization)  , (noncash interest and other)  , (loss on longterm debt)  , (noncash lease expense)  , (sharebased compensation)  , million
+
+Now, we add the net income to the adjustment:
+
+, (net income)  , (adjustment)  , million
+
+Therefore, Square generated , million in cash flow from operating activities in FY.
+
+Yes, there was a decrease in Cash & Cash Equivalents between FY  and Q of FY. According to the table:
+
+ January , : , million
+ July ,  (Q): , million
+
+The drop is approximately  million or about . from the previous year's amount.
+
+To calculate the year average of CapEx as a percentage of Revenue, we need to extract the relevant data from the statements.
+
+From the Statement of Income:
+
+ FY: Capital expenditures   million
+ FY: Capital expenditures   million
+ FY: Capital expenditures   million
+
+Total capital expenditures for  years         million
+
+Revenue for  years:
+ FY: Total net revenues  , million
+ FY: Total net revenues  , million
+ FY: Total net revenues  , million
+
+Total revenue for  years  ,  ,  ,  , million
+
+Now, let's calculate the average of CapEx as a percentage of Revenue:
+
+CapEx as a percentage of Revenue  (Total CapEx  Total Revenue) x 
+ ( million  , million) x 
+ .
+
+So, the year average of CapEx as a percentage of Revenue for Activision Blizzard is approximately ..
+
+The largest liability in American Express's Balance Sheet in  was Longterm debt, which totaled , million.
+
+To calculate Amazon's FY days payable outstanding (DPO), we need to use the following formula:
+
+DPO    (average accounts payable between FY and FY)  (FY COGS  change in inventory between FY and FY)
+
+We can extract the necessary information from the balance sheet and P&L statement as follows:
+
+ Average accounts payable between FY and FY:
+	 FY: ,
+	 FY: ,
+	Average accounts payable  (,  ,)    ,
+ FY COGS:
+	 Cost of sales: ,
+ Change in inventory between FY and FY:
+	 FY: ,
+	 FY: ,
+	Change in inventory  ,  ,  ,
+
+Now we can plug these values into the formula:
+
+DPO    (,)  (,  ,)
+   ,  ,
+   .
+ .
+
+Rounded to two decimal places, Amazon's FY days payable outstanding (DPO) is approximately . days.
+
+The driving factors behind the decrease in operating margin from . to . as of FY for M are:
+
+. Increased cost of sales: The company experienced increases in cost of sales due to various factors such as special item costs related to PFASrelated matters, higher raw materials and logistics costs, manufacturing productivity headwinds, and investments in growth, productivity, and sustainability.
+. Increased selling, general, and administrative expenses (SG&A): SG&A increased due to special item costs for significant litigation, impairment costs related to exiting PFAS manufacturing, costs related to exiting Russia, divestiturerelated restructuring charges, and continued investment in key growth initiatives.
+
+These increases in cost of sales and SG&A partially offset the increase in selling prices, resulting in a decrease in operating margin from . to ..
+
+It's worth noting that operating margin may not be a useful metric for a company like M, which is involved in various complex business operations, including research and development, manufacturing, and divestitures. Operating margin primarily reflects the profitability of a company's core operations, but it does not account for onetime items, such as special item costs or goodwill impairment charges, that can significantly impact the company's financial performance.
+
+In this case, the significant increases in cost of sales and SG&A due to various special item costs and divestitures may have masked underlying profitability, making operating margin a less accurate reflection of the company's overall financial health. A more comprehensive metric, such as earnings before interest, taxes, depreciation, and amortization (EBITDA), or adjusted EBITDA, might provide a more complete picture of M's financial performance.
+
+Based on the provided information, it appears that Amcor's restructuring liability as of December , , has been updated to reflect the changes in the liability balance.
+
+The current restructuring liability as of December ,  is:
+
+( in millions)
+Employee Costs
+Fixed Asset
+Related Costs
+Other Costs
+Total
+Restructuring
+Costs
+Liability balance at December , 
+
+ 
+
+ 
+
+ 
+
+ 
+
+This means that as of Q of FY close, the restructuring liability is expected to be paid within the next twelve months.
+
+To calculate the return on assets (ROA) for FY, we need to first calculate the average total assets between FY and FY. 
+
+The total assets for FY are , million, and for FY are , million.
+
+Average total assets  (,  ,)  
+ ,
+
+Next, we need to calculate the net income for FY. According to the statement of income, the net income for FY is  million.
+
+Now, we can calculate the ROA:
+
+ROA  (FY net income  Average total assets)
+ (  ,)
+ .
+
+Rounded to two decimal places, the return on assets (ROA) for FY is . or ..
+
+The effective tax rate for FY was , while the effective tax rate for FY was . Therefore, the effective tax rate increased by  percentage points.
+
+To calculate the FY operating cash flow ratio for Adobe, we need to find the values of "cash from operations" and "total current liabilities" in the statement of cash flows and the statement of financial position respectively.
+
+From the statement of cash flows, we can see that the net cash provided by operating activities is ,,. 
+
+From the statement of financial position, we can see that the total current liabilities are ,,.
+
+Now, we can calculate the operating cash flow ratio as follows:
+
+Operating Cash Flow Ratio  (Net Cash Provided by Operating Activities)  (Total Current Liabilities)
+ ,,  ,,
+ .
+
+So, the FY operating cash flow ratio for Adobe is approximately . or .
+
+To determine if AMD has a reasonably healthy liquidity profile based on its quick ratio for FY, we need to calculate the quick ratio first. The quick ratio is calculated by dividing the sum of cash and cash equivalents, and accounts receivable (net) by total current liabilities.
+
+For FY:
+
+Quick Ratio  (Cash and Cash Equivalents  Accounts Receivable (Net))  Total Current Liabilities
+ (,  ,)  ,
+ ,  ,
+ .
+
+A quick ratio of  or higher is generally considered to indicate a reasonably healthy liquidity profile. AMD's quick ratio for FY is ., which is above the threshold.
+
+Therefore, based on its quick ratio, AMD appears to have a reasonably healthy liquidity profile for FY.
+
+Based on the provided text, here are the major acquisitions made by AMCOR:
+
+FY:
+
+. Acquisition of a Czech Republic company operating a worldclass flexible packaging manufacturing plant (August , )  Purchase consideration:  million
+. Acquisition of a medical device packaging manufacturing site in Shanghai, China (March , )  Purchase consideration:  million
+. Acquisition of a New Zealandbased leading manufacturer of automated protein packaging machines (May , )  Purchase consideration:  million
+
+FY:
+
+. Disposal of Russian business (December , )  Sale price:  million
+
+Note that there are no acquisitions mentioned for FY in the provided text.
+
+Based on the provided data for FY, CVS Health appears to be a capitalintensive business. Here's why:
+
+. High level of longterm debt: The company has , million in longterm debt, which is a significant portion of its total liabilities.
+. Significant investments in property and equipment: CVS Health has , million in property and equipment, net, which indicates a substantial investment in its physical assets.
+. High level of intangible assets: The company has , million in intangible assets, net, which suggests significant investments in its brand, intellectual property, and other nonphysical assets.
+. Large goodwill balance: CVS Health has , million in goodwill, which is a common result of acquisitions and indicates the value placed on its acquired businesses.
+
+These factors suggest that CVS Health is investing heavily in its operations, infrastructure, and intangible assets, which can be considered capitalintensive. However, it's worth noting that the company also generates significant revenue from its operations, which helps to offset these capital expenditures.
+
+To determine which AMD reporting segment had sales that proportionally increased the most from FY to FY (excluding Embedded), we need to calculate the percentage change in sales for each segment.
+
+From the table:
+
+ Client net revenue decreased by  from . billion to . billion.
+ Gaming net revenue increased by . million (.  .) but this is not a significant enough increase to be considered proportional.
+ Data Center net revenue increased by . billion (,  ,).
+
+The percentage change in sales for each segment (excluding Embedded) can be calculated as follows:
+
+ Client: ((.  .)  .) x  ≈ .
+ Gaming: ((.  .)  .) x  ≈ .
+ Data Center: ((,  ,)  ,) x  ≈ 
+
+Based on these calculations, the Gaming segment had sales that proportionally increased by the most from FY to FY (excluding Embedded).
+
+To determine if Adobe's free cash flow conversion is improving as of FY, we need to calculate the free cash flow conversion ratio.
+
+Free Cash Flow Conversion Ratio  (Net Income  Depreciation, Amortization, and Accretion)  Net Income
+
+For FY:
+Net Income  , million
+Depreciation, Amortization, and Accretion   million
+
+Free Cash Flow  Net Income  Depreciation, Amortization, and Accretion
+ ,  
+ , million
+
+Free Cash Flow Conversion Ratio  Free Cash Flow  Net Income
+ ,  ,
+ . or .
+
+Comparing this to previous years:
+
+ FY: Free Cash Flow Conversion Ratio  (,  )  ,  .
+ FY: Free Cash Flow Conversion Ratio  (,  )  ,  .
+
+As of FY, Adobe's free cash flow conversion ratio (.) is lower than the previous two years (. and .). Therefore, Adobe's free cash flow conversion appears to be decreasing as of FY.
+
+As of FY, AMD sells:
+
+. Server microprocessors (CPUs) and graphics processing units (GPUs)
+. Data processing units (DPUs)
+. Field Programmable Gate Arrays (FPGAs)
+. Adaptive SystemonChip (SoC) products for data centers
+. CPUs, accelerated processing units (APUs) that integrate CPUs and GPUs, and chipsets for desktop and notebook personal computers
+. Discrete GPUs
+. Semicustom SoC products and development services
+. Embedded CPUs, GPUs, APUs, FPGAs, and Adaptive SoC products
+
+According to the table, Total Assets for Costco at the end of August ,  was , million.
+
+Yes, according to Note  in the table of contents, Boeing has reported several ongoing legal battles related to the Lion Air Flight  and Ethiopian Airlines Flight  accidents. Specifically:
+
+ A Deferred Prosecution Agreement with the U.S. Department of Justice that resolved an investigation into the evaluation of the  MAX by the Federal Aviation Administration (FAA)
+ A proposed settlement with plaintiffs in a shareholder derivative lawsuit
+ A previously disclosed investigation by the Securities and Exchange Commission related to the  MAX accidents, which resulted in a civil penalty and an earnings charge
+
+Additionally, Boeing is currently involved in arbitration with Embraer S.A. over agreements that were terminated due to Embraer's failure to meet certain required closing conditions.
+
+These legal battles are expected to have a material effect on Boeing's financial position, results of operations, or cash flows, although the exact amount or range of losses cannot be reasonably estimated at this time.
+
+As of Q , the following debt securities are registered to trade on a national securities exchange under M's name:
+
+. . Notes due  (traded on New York Stock Exchange with symbol MMM)
+. . Notes due  (traded on New York Stock Exchange with symbol MMM)
+. . Notes due  (traded on New York Stock Exchange with symbol MMM)
+
+The table does not provide information on what drove the change in gross margin from  to . However, we can analyze the changes in revenue and expenses to understand the impact on gross margin.
+
+Gross margin is calculated as (Revenues  Cost of Goods Sold)  Revenues. The cost of goods sold is not explicitly stated in the table, but we can infer it from the noninterest revenues and interest income.
+
+Noninterest revenues include:
+
+ Net card fees: , (), , (), , ()
+ Service fees and other revenue: , (), , (), , ()
+ Processed revenue: , (), , (), , ()
+
+These revenues are likely related to the company's card services and other business activities. The increase in these revenues from  to  could be driven by various factors such as:
+
+ Increased demand for card services
+ Expansion of new products or services
+ Improved customer retention and loyalty programs
+
+On the other hand, expenses include:
+
+ Card Member rewards: , (), , (), , ()
+ Business development: , (), , (), , ()
+
+These expenses are likely related to the company's marketing and business development efforts. The increase in these expenses from  to  could be driven by various factors such as:
+
+ Increased investment in marketing and advertising
+ Expansion of new products or services
+
+The gross margin for American Express decreased from  to , which may indicate that the company's revenue growth was not fully offset by cost savings or efficiency improvements. However, without more information on the specific drivers of these changes, it is difficult to determine the exact reasons.
+
+It's worth noting that gross margin may not be a useful metric for a company like American Express, which operates in a highly competitive and dynamic industry with complex revenue streams. Other metrics such as operating income, net interest income, and return on equity (ROE) may provide more insight into the company's financial performance and profitability.
+
+No, according to the statement, Johnson & Johnson guides  adjusted operational EPS of ., which is a decrease from the previous year's adjusted EPS of ., indicating that growth in JnJ's adjusted EPS is expected to be stable or slightly lower in FY.
+
+Based on the provided text, here are the major acquisitions made by Best Buy:
+
+Fiscal Year :
+
+ None mentioned specifically.
+
+Fiscal Year :
+
+ Current Health Ltd. (acquired on November , )  a careathome technology platform
+ Two Peaks, LLC dba Yardbird Furniture (acquired on November , )  a directtoconsumer outdoor furniture company
+
+Fiscal Year :
+
+ None mentioned specifically.

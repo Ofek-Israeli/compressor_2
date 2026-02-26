@@ -1,0 +1,206 @@
+[
+  {
+    "example_id": "financebench_id_03856",
+    "question": "What is the FY2017 operating cash flow ratio for Adobe? Operating cash flow ratio is defined as: cash from operations / total current liabilities. Round your answer to two decimal places. Please utilize information provided primarily within the balance sheet and the cash flow statement.",
+    "ground_truth_answer": "0.83",
+    "llm_answer": "To calculate the FY2017 operating cash flow ratio for Adobe, we need to use the following values:\n\n- Cash from operating activities (FY2017): $2,912,853\n- Total current liabilities (FY2017): $3,527,457\n\nOperating cash flow ratio = Cash from operating activities / Total current liabilities\n= $2,912,853 / $3,527,457\n\u2248 0.83\n\nRounded to two decimal places, the answer is 0.83."
+  },
+  {
+    "example_id": "financebench_id_04417",
+    "question": "What is the year end FY2019 total amount of inventories for Best Buy? Answer in USD millions. Base your judgments on the information provided primarily in the balance sheet.",
+    "ground_truth_answer": "$5409.00",
+    "llm_answer": "According to the table, the merchandise inventories are $5,409 million and other current assets are $466 million. \n\nTherefore, the total amount of inventories for FY2019 is $5,409 + $466 = $5,875 million."
+  },
+  {
+    "example_id": "financebench_id_04412",
+    "question": "We need to calculate a reasonable approximation (or exact number if possible) of a financial metric. Basing your judgment by information plainly provided in the balance sheet and the P&L statement, what is Lockheed Martin's FY2020 asset turnover ratio? Asset turnover ratio is defined as: FY2020 revenue / (average total assets between FY2019 and FY2020). Round your answer to two decimal places.",
+    "ground_truth_answer": "1.33",
+    "llm_answer": "To calculate the asset turnover ratio for Lockheed Martin in FY2020, we need to first find the average of their total assets between FY2019 and FY2020. \n\nTotal assets in FY2019: $47,528\nTotal assets in FY2020: $50,710\n\nAverage total assets = ($47,528 + $50,710) / 2\n= $49,119\n\nNow we can calculate the asset turnover ratio:\n\nAsset Turnover Ratio = Revenue / Average Total Assets\n= $65,398 (FY2020 revenue) / $49,119\n= 1.33"
+  },
+  {
+    "example_id": "financebench_id_10130",
+    "question": "Based on the information provided primarily in the balance sheet and the statement of income, what is FY2020 days payable outstanding (DPO) for Corning? DPO is defined as: 365 * (average accounts payable between FY2019 and FY2020) / (FY2020 COGS + change in inventory between FY2019 and FY2020). Round your answer to two decimal places.",
+    "ground_truth_answer": "63.86",
+    "llm_answer": "To calculate the Days Payable Outstanding (DPO) for Corning, we need to follow these steps:\n\n1. Calculate the average accounts payable between FY2019 and FY2020:\n   Average Accounts Payable = ($1,174 + $1,587) / 2\n   Average Accounts Payable = $1,381.5\n\n2. Calculate the change in inventory between FY2019 and FY2020:\n   Change in Inventory = $2,438 - $2,320\n   Change in Inventory = $118\n\n3. Calculate the COGS for FY2020:\n   COGS = $7,772\n\n4. Now we can calculate DPO using the formula provided:\n\nDPO = 365 * (Average Accounts Payable) / (COGS + Change in Inventory)\n= 365 * ($1,381.5) / ($7,772 + $118)\n= 365 * ($1,381.5) / $7,890\n= 365 * 0.1753\n= 63.59\n\nSo, the FY2020 DPO for Corning is approximately 63.59 days."
+  },
+  {
+    "example_id": "financebench_id_09724",
+    "question": "What is Coca Cola's FY2021 COGS % margin? Calculate what was asked by utilizing the line items clearly shown in the income statement.",
+    "ground_truth_answer": "39.7%",
+    "llm_answer": "To calculate Coca Cola's FY2021 COGS % margin, we need to use the following line items from the Income Statement:\n\n* Net Operating Revenues: $38,655\n* Cost of goods sold (COGS): $15,357\n\nFirst, let's calculate the COGS % margin as a percentage of net operating revenues:\n\nCOGS % margin = (COGS / Net Operating Revenues) x 100\n= ($15,357 / $38,655) x 100\n= 39.8%\n\nSo, Coca Cola's FY2021 COGS % margin is approximately 39.8%."
+  },
+  {
+    "example_id": "financebench_id_00070",
+    "question": "Does American Water Works have positive working capital based on FY2022 data? If working capital is not a useful or relevant metric for this company, then please state that and explain why.",
+    "ground_truth_answer": "No, American Water Works had negative working capital of -$1561M in FY 2022.",
+    "llm_answer": "Based on the provided financial data for American Water Works Company, Inc. as of December 31, 2022, we can calculate the working capital as follows:\n\nWorking Capital = Current Assets - Current Liabilities\n\nCurrent Assets: $1,250 (Total current assets)\n\nCurrent Liabilities: $2,811 (Total current liabilities)\n\nWorking Capital = $1,250 - $2,811 = -$1,561\n\nSince the working capital is negative ($-1,561), American Water Works Company, Inc. does not have positive working capital based on FY2022 data.\n\nHowever, it's worth noting that working capital can be a useful metric for some companies, but not necessarily for this one. Working capital represents the difference between a company's current assets and its current liabilities, which is essentially the amount of cash available to pay off debts or invest in new opportunities. For American Water Works, the negative working capital may indicate that the company has more debt than liquid assets, making it challenging to meet its short-term obligations.\n\nIn this case, other metrics such as debt-to-equity ratio, interest coverage ratio, or return on equity might be more relevant and useful for evaluating the company's financial health."
+  },
+  {
+    "example_id": "financebench_id_01482",
+    "question": "At the Pepsico AGM held on May 3, 2023, what was the outcome of the shareholder vote on the shareholder proposal for a congruency report by Pepsico on net-zero emissions policies?",
+    "ground_truth_answer": "The shareholder proposal for a congruency report by Pepsico on net-zero emissions policies was defeated.",
+    "llm_answer": "The shareholder proposal regarding a congruency report on net-zero emissions policies was defeated. The \"For\" votes were 19,718,780, while the \"Against\" votes were 977,228,788."
+  },
+  {
+    "example_id": "financebench_id_10136",
+    "question": "We want to calculate a financial metric. Please help us compute it by basing your answers off of the cash flow statement and the income statement. Here's the question: what is the FY2022 retention ratio (using total cash dividends paid and net income attributable to shareholders) for General Mills? Round answer to two decimal places.",
+    "ground_truth_answer": "0.54",
+    "llm_answer": "To calculate the FY2022 retention ratio, we need to use the following information from the Cash Flow Statement and Income Statement:\n\n* Total cash dividends paid: $1,244.5 million\n* Net earnings (attributable to shareholders): $2,707.3 million\n\nThe retention ratio is calculated as:\n\nRetention Ratio = (Total Cash Dividends Paid / Net Earnings) x 100\n\nPlugging in the values, we get:\n\nRetention Ratio = ($1,244.5 million / $2,707.3 million) x 100\nRetention Ratio \u2248 46.00%\n\nSo, the FY2022 retention ratio for General Mills is approximately 46.00%."
+  },
+  {
+    "example_id": "financebench_id_01290",
+    "question": "Who are the primary customers of Boeing as of FY2022?",
+    "ground_truth_answer": "Boeing's primary customers as of FY2022 are a limited number of commercial airlines and the US government. The US government accounted for 40% of Boeing's total revenues in FY2022.",
+    "llm_answer": "The text does not explicitly state who the primary customers of Boeing are as of FY2022. However, it is mentioned that \"We derive a significant portion of our revenues from a limited number of commercial airlines\" and that \"Fleet decisions, airline consolidations or financial challenges involving any of our major commercial airline customers could significantly reduce our revenues and limit our opportunity to generate profits from those customers.\"\n\nIt can be inferred that the primary customers of Boeing are likely the major commercial airlines that purchase their aircraft. However, the text does not provide a specific list of these customers.\n\nIn FY2022, 40% of Boeing's revenues were earned pursuant to U.S. government contracts, which include FMS through the U.S. government. This suggests that the U.S. government is also a significant customer for Boeing, but it is unclear whether this is the primary source of revenue or if it is part of a broader portfolio of customers."
+  },
+  {
+    "example_id": "financebench_id_03838",
+    "question": "What is the FY2019 - FY2020 total revenue growth rate for Block (formerly known as Square)? Answer in units of percents and round to one decimal place. Approach the question asked by assuming the standpoint of an investment banking analyst who only has access to the statement of income.",
+    "ground_truth_answer": "101.5%",
+    "llm_answer": "To calculate the total revenue growth rate, we need to find the difference between the FY2020 and FY2019 revenues, divide it by the FY2019 revenue, and then multiply by 100.\n\nFY2020 Revenue: $4,713,500\nFY2019 Revenue: $3,081,074\n\nRevenue Growth Rate = ((FY2020 Revenue - FY2019 Revenue) / FY2019 Revenue) * 100\n= (($4,713,500 - $3,081,074) / $3,081,074) * 100\n= ($1,632,426 / $3,081,074) * 100\n= 0.527 or 52.7%\n\nSo, the FY2019 - FY2020 total revenue growth rate for Square is approximately 52.7%."
+  },
+  {
+    "example_id": "financebench_id_08286",
+    "question": "By drawing conclusions from the information stated only in the income statement, what is Amazon's FY2019 net income attributable to shareholders (in USD millions)?",
+    "ground_truth_answer": "$11588.00",
+    "llm_answer": "According to the table, Amazon's FY2019 net income is $11,588 million."
+  },
+  {
+    "example_id": "financebench_id_03471",
+    "question": "By drawing conclusions from the information stated only in the statement of financial position, what is General Mills's FY2020 working capital ratio? Define working capital ratio as total current assets divided by total current liabilities. Round your answer to two decimal places.",
+    "ground_truth_answer": "0.68",
+    "llm_answer": "To calculate the working capital ratio, we need to divide the total current assets by the total current liabilities.\n\nTotal current assets: $5,121.3\nTotal current liabilities: $7,491.5\n\nWorking capital ratio = Total current assets / Total current liabilities\n= $5,121.3 / $7,491.5\n= 0.69 (rounded to two decimal places)\n\nTherefore, General Mills's FY2020 working capital ratio is 0.69."
+  },
+  {
+    "example_id": "financebench_id_07661",
+    "question": "Using the cash flow statement, answer the following question to the best of your abilities: how much did Block (formerly known as Square) generate in cash flow from operating activities in FY2020? Answer in USD millions.",
+    "ground_truth_answer": "$382.00",
+    "llm_answer": "To find the cash flow from operating activities for FY2020, we need to add up the net income and the adjustments provided by operating activities.\n\nNet income for FY2020 is $213,105 million.\n\nThe adjustment provided by operating activities is:\n\n$84,212 (depreciation and amortization) + $76,129 (non-cash interest and other) + $6,651 (loss on long-term debt) + $70,253 (non-cash lease expense) + $397,800 (share-based compensation) = $554,945 million\n\nNow, we add the net income to the adjustment:\n\n$213,105 (net income) + $554,945 (adjustment) = $768,050 million\n\nTherefore, Square generated $768,050 million in cash flow from operating activities in FY2020."
+  },
+  {
+    "example_id": "financebench_id_00288",
+    "question": "Was there any drop in Cash & Cash equivalents between FY 2023 and Q2 of FY2024?",
+    "ground_truth_answer": "Yes, there was a decline of ~42% between FY2023 and Q2 of FY 2024.",
+    "llm_answer": "Yes, there was a decrease in Cash & Cash Equivalents between FY 2023 and Q2 of FY2024. According to the table:\n\n- January 28, 2023: $1,874 million\n- July 29, 2023 (Q2): $1,093 million\n\nThe drop is approximately $781 million or about 41.8% from the previous year's amount."
+  },
+  {
+    "example_id": "financebench_id_07966",
+    "question": "What is the FY2017 - FY2019 3 year average of capex as a % of revenue for Activision Blizzard? Answer in units of percents and round to one decimal place. Calculate (or extract) the answer from the statement of income and the cash flow statement.",
+    "ground_truth_answer": "1.9%",
+    "llm_answer": "To calculate the 3-year average of CapEx as a percentage of Revenue, we need to extract the relevant data from the statements.\n\nFrom the Statement of Income:\n\n* FY2017: Capital expenditures = $155 million\n* FY2018: Capital expenditures = $131 million\n* FY2019: Capital expenditures = $116 million\n\nTotal capital expenditures for 3 years = $155 + $131 + $116 = $402 million\n\nRevenue for 3 years:\n* FY2017: Total net revenues = $7,017 million\n* FY2018: Total net revenues = $7,017 million\n* FY2019: Total net revenues = $6,489 million\n\nTotal revenue for 3 years = $7,017 + $7,017 + $6,489 = $20,523 million\n\nNow, let's calculate the average of CapEx as a percentage of Revenue:\n\nCapEx as a percentage of Revenue = (Total CapEx / Total Revenue) x 100\n= ($402 million / $20,523 million) x 100\n= 1.96%\n\nSo, the 3-year average of CapEx as a percentage of Revenue for Activision Blizzard is approximately 1.9%."
+  },
+  {
+    "example_id": "financebench_id_01964",
+    "question": "What was the largest liability in American Express's Balance Sheet in 2022?",
+    "ground_truth_answer": "Customer deposits",
+    "llm_answer": "The largest liability in American Express's Balance Sheet in 2022 was Long-term debt, which totaled $42,573 million."
+  },
+  {
+    "example_id": "financebench_id_06655",
+    "question": "What is Amazon's FY2017 days payable outstanding (DPO)? DPO is defined as: 365 * (average accounts payable between FY2016 and FY2017) / (FY2017 COGS + change in inventory between FY2016 and FY2017). Round your answer to two decimal places. Address the question by using the line items and information shown within the balance sheet and the P&L statement.",
+    "ground_truth_answer": "93.86",
+    "llm_answer": "To calculate Amazon's FY2017 days payable outstanding (DPO), we need to use the following formula:\n\nDPO = 365 * (average accounts payable between FY2016 and FY2017) / (FY2017 COGS + change in inventory between FY2016 and FY2017)\n\nWe can extract the necessary information from the balance sheet and P&L statement as follows:\n\n* Average accounts payable between FY2016 and FY2017:\n\t+ FY2016: $34,616\n\t+ FY2017: $43,816\n\tAverage accounts payable = ($34,616 + $43,816) / 2 = $39,216\n* FY2017 COGS:\n\t+ Cost of sales: $111,934\n* Change in inventory between FY2016 and FY2017:\n\t+ FY2016: $16,047\n\t+ FY2017: $11,461\n\tChange in inventory = $16,047 - $11,461 = $4,586\n\nNow we can plug these values into the formula:\n\nDPO = 365 * ($39,216) / ($111,934 + $4,586)\n= 365 * $39,216 / $116,520\n= 365 * 0.336\n= 122.79\n\nRounded to two decimal places, Amazon's FY2017 days payable outstanding (DPO) is approximately 122.79 days."
+  },
+  {
+    "example_id": "financebench_id_01226",
+    "question": "What drove operating margin change as of FY2022 for 3M? If operating margin is not a useful metric for a company like this, then please state that and explain why.",
+    "ground_truth_answer": "Operating Margin for 3M in FY2022 has decreased by 1.7% primarily due to: \n-Decrease in gross Margin\n-mostly one-off charges including Combat Arms Earplugs litigation, impairment related to exiting PFAS manufacturing, costs related to exiting Russia and divestiture-related restructuring\ncharges",
+    "llm_answer": "The driving factors behind the decrease in operating margin from 20.8% to 19.1% as of FY2022 for 3M are:\n\n1. Increased cost of sales: The company experienced increases in cost of sales due to various factors such as special item costs related to PFAS-related matters, higher raw materials and logistics costs, manufacturing productivity headwinds, and investments in growth, productivity, and sustainability.\n2. Increased selling, general, and administrative expenses (SG&A): SG&A increased due to special item costs for significant litigation, impairment costs related to exiting PFAS manufacturing, costs related to exiting Russia, divestiture-related restructuring charges, and continued investment in key growth initiatives.\n\nThese increases in cost of sales and SG&A partially offset the increase in selling prices, resulting in a decrease in operating margin from 20.8% to 19.1%.\n\nIt's worth noting that operating margin may not be a useful metric for a company like 3M, which is involved in various complex business operations, including research and development, manufacturing, and divestitures. Operating margin primarily reflects the profitability of a company's core operations, but it does not account for one-time items, such as special item costs or goodwill impairment charges, that can significantly impact the company's financial performance.\n\nIn this case, the significant increases in cost of sales and SG&A due to various special item costs and divestitures may have masked underlying profitability, making operating margin a less accurate reflection of the company's overall financial health. A more comprehensive metric, such as earnings before interest, taxes, depreciation, and amortization (EBITDA), or adjusted EBITDA, might provide a more complete picture of 3M's financial performance."
+  },
+  {
+    "example_id": "financebench_id_01936",
+    "question": "What is the nature & purpose of AMCOR's restructuring liability as oF Q2 of FY2023 close?",
+    "ground_truth_answer": "87% of the total restructuring liability is related Employee liabilities.",
+    "llm_answer": "Based on the provided information, it appears that Amcor's restructuring liability as of December 31, 2022, has been updated to reflect the changes in the liability balance.\n\nThe current restructuring liability as of December 31, 2022 is:\n\n($ in millions)\nEmployee Costs\nFixed Asset\nRelated Costs\nOther Costs\nTotal\nRestructuring\nCosts\nLiability balance at December 31, 2022\n$\n81 \n$\n2 \n$\n10 \n$\n93 \n\nThis means that as of Q2 of FY2023 close, the restructuring liability is expected to be paid within the next twelve months."
+  },
+  {
+    "example_id": "financebench_id_10420",
+    "question": "Based on the information provided primarily in the statement of financial position and the statement of income, what is AES's FY2022 return on assets (ROA)? ROA is defined as: FY2022 net income / (average total assets between FY2021 and FY2022). Round your answer to two decimal places.",
+    "ground_truth_answer": "-0.02",
+    "llm_answer": "To calculate the return on assets (ROA) for FY2022, we need to first calculate the average total assets between FY2021 and FY2022. \n\nThe total assets for FY2022 are $38,363 million, and for FY2021 are $32,963 million.\n\nAverage total assets = ($38,363 + $32,963) / 2\n= $35,663\n\nNext, we need to calculate the net income for FY2022. According to the statement of income, the net income for FY2022 is -$546 million.\n\nNow, we can calculate the ROA:\n\nROA = (FY2022 net income / Average total assets)\n= (-$546 / $35,663)\n= -0.0155\n\nRounded to two decimal places, the return on assets (ROA) for FY2022 is -0.02 or 2.00%."
+  },
+  {
+    "example_id": "financebench_id_01346",
+    "question": "How much has the effective tax rate of Corning changed between FY2021 and FY2022?",
+    "ground_truth_answer": "The effective tax rate of Corning has changed from 20% in FY2021 to 23% in FY 2022.",
+    "llm_answer": "The effective tax rate for FY2021 was 20%, while the effective tax rate for FY2022 was 23%. Therefore, the effective tax rate increased by 3 percentage points."
+  },
+  {
+    "example_id": "financebench_id_04735",
+    "question": "You are an investment banker and your only resource(s) to answer the following question is (are): the statement of financial position and the cash flow statement. Here's the question: what is the FY2015 operating cash flow ratio for Adobe? Operating cash flow ratio is defined as: cash from operations / total current liabilities. Round your answer to two decimal places.",
+    "ground_truth_answer": "0.66",
+    "llm_answer": "To calculate the FY2015 operating cash flow ratio for Adobe, we need to find the values of \"cash from operations\" and \"total current liabilities\" in the statement of cash flows and the statement of financial position respectively.\n\nFrom the statement of cash flows, we can see that the net cash provided by operating activities is $1,469,502. \n\nFrom the statement of financial position, we can see that the total current liabilities are $2,213,556.\n\nNow, we can calculate the operating cash flow ratio as follows:\n\nOperating Cash Flow Ratio = (Net Cash Provided by Operating Activities) / (Total Current Liabilities)\n= 1,469,502 / 2,213,556\n= 0.66\n\nSo, the FY2015 operating cash flow ratio for Adobe is approximately 0.66 or 66%."
+  },
+  {
+    "example_id": "financebench_id_00222",
+    "question": "Does AMD have a reasonably healthy liquidity profile based on its quick ratio for FY22? If the quick ratio is not relevant to measure liquidity, please state that and explain why.",
+    "ground_truth_answer": "Yes. The quick ratio is 1.57, calculated as (cash and cash equivalents+Short term investments+Accounts receivable, net+receivables from related parties)/ (current liabilities).",
+    "llm_answer": "To determine if AMD has a reasonably healthy liquidity profile based on its quick ratio for FY22, we need to calculate the quick ratio first. The quick ratio is calculated by dividing the sum of cash and cash equivalents, and accounts receivable (net) by total current liabilities.\n\nFor FY22:\n\nQuick Ratio = (Cash and Cash Equivalents + Accounts Receivable (Net)) / Total Current Liabilities\n= ($4,835 + $4,126) / $6,369\n= $8,961 / $6,369\n= 1.42\n\nA quick ratio of 1 or higher is generally considered to indicate a reasonably healthy liquidity profile. AMD's quick ratio for FY22 is 1.42, which is above the threshold.\n\nTherefore, based on its quick ratio, AMD appears to have a reasonably healthy liquidity profile for FY22."
+  },
+  {
+    "example_id": "financebench_id_01079",
+    "question": "What are major acquisitions that AMCOR has done in FY2023, FY2022 and FY2021?",
+    "ground_truth_answer": "Amcor completed these acquisitions during FY2023:\n-100% equity interest of a flexibles manufacturing company in the Czech Republic\n- 100% equity interest in a medical device packaging manufacturing site in\nShanghai, China.\n-acquisition of a New Zealand-based leading manufacturer of state-of-the-art, automated protein\npackaging machines.",
+    "llm_answer": "Based on the provided text, here are the major acquisitions made by AMCOR:\n\n**FY2023:**\n\n1. Acquisition of a Czech Republic company operating a world-class flexible packaging manufacturing plant (August 1, 2022) - Purchase consideration: $59 million\n2. Acquisition of a medical device packaging manufacturing site in Shanghai, China (March 17, 2023) - Purchase consideration: $60 million\n3. Acquisition of a New Zealand-based leading manufacturer of automated protein packaging machines (May 31, 2023) - Purchase consideration: $45 million\n\n**FY2022:**\n\n1. Disposal of Russian business (December 23, 2022) - Sale price: $365 million\n\nNote that there are no acquisitions mentioned for FY2021 in the provided text."
+  },
+  {
+    "example_id": "financebench_id_00790",
+    "question": "Is CVS Health a capital-intensive business based on FY2022 data?",
+    "ground_truth_answer": "Yes, CVS Health requires an extensive asset base to operate, which is evident from its ROA of only 1.82% in 2022 and 3.39% in 2021, though it should be noted that a significant portion of this asset base is goodwill, and CVS's fixed assets/total assets ratio is on the lower side of 5.6%.",
+    "llm_answer": "Based on the provided data for FY2022, CVS Health appears to be a capital-intensive business. Here's why:\n\n1. High level of long-term debt: The company has $50,476 million in long-term debt, which is a significant portion of its total liabilities.\n2. Significant investments in property and equipment: CVS Health has $12,873 million in property and equipment, net, which indicates a substantial investment in its physical assets.\n3. High level of intangible assets: The company has $24,754 million in intangible assets, net, which suggests significant investments in its brand, intellectual property, and other non-physical assets.\n4. Large goodwill balance: CVS Health has $78,150 million in goodwill, which is a common result of acquisitions and indicates the value placed on its acquired businesses.\n\nThese factors suggest that CVS Health is investing heavily in its operations, infrastructure, and intangible assets, which can be considered capital-intensive. However, it's worth noting that the company also generates significant revenue from its operations, which helps to offset these capital expenditures."
+  },
+  {
+    "example_id": "financebench_id_00563",
+    "question": "From FY21 to FY22, excluding Embedded, in which AMD reporting segment did sales proportionally increase the most?",
+    "ground_truth_answer": "Data Center",
+    "llm_answer": "To determine which AMD reporting segment had sales that proportionally increased the most from FY21 to FY22 (excluding Embedded), we need to calculate the percentage change in sales for each segment.\n\nFrom the table:\n\n* Client net revenue decreased by 10% from $6.9 billion to $6.2 billion.\n* Gaming net revenue increased by $1.2 million ($5.607 - $4.405) but this is not a significant enough increase to be considered proportional.\n* Data Center net revenue increased by $2.3 billion ($6,043 - $3,694).\n\nThe percentage change in sales for each segment (excluding Embedded) can be calculated as follows:\n\n* Client: (($6.9 - $6.2) / $6.9) x 100% \u2248 -11.1%\n* Gaming: (($5.607 - $4.405) / $5.607) x 100% \u2248 +25.3%\n* Data Center: (($6,043 - $3,694) / $3,694) x 100% \u2248 +64%\n\nBased on these calculations, the Gaming segment had sales that proportionally increased by the most from FY21 to FY22 (excluding Embedded)."
+  },
+  {
+    "example_id": "financebench_id_00591",
+    "question": "Does Adobe have an improving Free cashflow conversion as of FY2022?",
+    "ground_truth_answer": "Yes, the FCF conversion (using net income as the denominator) for Adobe has improved by ~13% from 143% in 2021 to 156% in 2022",
+    "llm_answer": "To determine if Adobe's free cash flow conversion is improving as of FY2022, we need to calculate the free cash flow conversion ratio.\n\nFree Cash Flow Conversion Ratio = (Net Income - Depreciation, Amortization, and Accretion) / Net Income\n\nFor FY2022:\nNet Income = $4,756 million\nDepreciation, Amortization, and Accretion = $856 million\n\nFree Cash Flow = Net Income - Depreciation, Amortization, and Accretion\n= $4,756 - $856\n= $3,900 million\n\nFree Cash Flow Conversion Ratio = Free Cash Flow / Net Income\n= $3,900 / $4,756\n= 0.816 or 81.6%\n\nComparing this to previous years:\n\n* FY2021: Free Cash Flow Conversion Ratio = ($4,822 - $788) / $4,822 = 83.5%\n* FY2020: Free Cash Flow Conversion Ratio = ($5,260 - $757) / $5,260 = 86.3%\n\nAs of FY2022, Adobe's free cash flow conversion ratio (81.6%) is lower than the previous two years (83.5% and 86.3%). Therefore, Adobe's free cash flow conversion appears to be decreasing as of FY2022."
+  },
+  {
+    "example_id": "financebench_id_00995",
+    "question": "What are the major products and services that AMD sells as of FY22?",
+    "ground_truth_answer": "AMD sells server microprocessors (CPUs) and graphics processing units (GPUs), data processing units (DPUs), Field Programmable Gate Arrays (FPGAs), and Adaptive System-on-Chip (SoC) products for data centers; CPUs, accelerated processing units (APUs) that integrate CPUs and GPUs, and chipsets for desktop and notebook personal computers; discrete GPUs, and semi-custom SoC products and development services; and embedded CPUs, GPUs, APUs, FPGAs, and Adaptive SoC products.",
+    "llm_answer": "As of FY22, AMD sells:\n\n1. Server microprocessors (CPUs) and graphics processing units (GPUs)\n2. Data processing units (DPUs)\n3. Field Programmable Gate Arrays (FPGAs)\n4. Adaptive System-on-Chip (SoC) products for data centers\n5. CPUs, accelerated processing units (APUs) that integrate CPUs and GPUs, and chipsets for desktop and notebook personal computers\n6. Discrete GPUs\n7. Semi-custom SoC products and development services\n8. Embedded CPUs, GPUs, APUs, FPGAs, and Adaptive SoC products"
+  },
+  {
+    "example_id": "financebench_id_04209",
+    "question": "Using only the information within the balance sheet, how much total assets did Costco have at the end of FY2021? Answer in USD millions.",
+    "ground_truth_answer": "$59268.00",
+    "llm_answer": "According to the table, Total Assets for Costco at the end of August 29, 2021 was $59,268 million."
+  },
+  {
+    "example_id": "financebench_id_01091",
+    "question": "Has Boeing reported any materially important ongoing legal battles from FY2022?",
+    "ground_truth_answer": "Yes. Multiple lawsuits have been filed against Boeing resulting from a 2018 Lion Air crash and a 2019 Ethiopian Airlines crash.",
+    "llm_answer": "Yes, according to Note 22 in the table of contents, Boeing has reported several ongoing legal battles related to the Lion Air Flight 610 and Ethiopian Airlines Flight 302 accidents. Specifically:\n\n* A Deferred Prosecution Agreement with the U.S. Department of Justice that resolved an investigation into the evaluation of the 737 MAX by the Federal Aviation Administration (FAA)\n* A proposed settlement with plaintiffs in a shareholder derivative lawsuit\n* A previously disclosed investigation by the Securities and Exchange Commission related to the 737 MAX accidents, which resulted in a civil penalty and an earnings charge\n\nAdditionally, Boeing is currently involved in arbitration with Embraer S.A. over agreements that were terminated due to Embraer's failure to meet certain required closing conditions.\n\nThese legal battles are expected to have a material effect on Boeing's financial position, results of operations, or cash flows, although the exact amount or range of losses cannot be reasonably estimated at this time."
+  },
+  {
+    "example_id": "financebench_id_00941",
+    "question": "Which debt securities are registered to trade on a national securities exchange under 3M's name as of Q2 of 2023?",
+    "ground_truth_answer": "Following debt securities registered under 3M's name are listed to trade on the New York Stock Exchange:\n-1.500% Notes due 2026 (Trading Symbol: MMM26)\n-1.750% Notes due 2030 (Trading Symbol: MMM30)\n-1.500% Notes due 2031 (Trading Symbol: MMM31)",
+    "llm_answer": "As of Q2 2023, the following debt securities are registered to trade on a national securities exchange under 3M's name:\n\n1. 1.500% Notes due 2026 (traded on New York Stock Exchange with symbol MMM26)\n2. 1.750% Notes due 2030 (traded on New York Stock Exchange with symbol MMM30)\n3. 1.500% Notes due 2031 (traded on New York Stock Exchange with symbol MMM31)"
+  },
+  {
+    "example_id": "financebench_id_00720",
+    "question": "What drove gross margin change as of the FY2022 for American Express? If gross margin is not a useful metric for a company like this, then please state that and explain why.",
+    "ground_truth_answer": "Performance is not measured through gross margin",
+    "llm_answer": "The table does not provide information on what drove the change in gross margin from 2019 to 2022. However, we can analyze the changes in revenue and expenses to understand the impact on gross margin.\n\nGross margin is calculated as (Revenues - Cost of Goods Sold) / Revenues. The cost of goods sold is not explicitly stated in the table, but we can infer it from the non-interest revenues and interest income.\n\nNon-interest revenues include:\n\n* Net card fees: $6,070 (2022), $5,195 (2021), $4,664 (2020)\n* Service fees and other revenue: $4,521 (2022), $3,316 (2021), $2,702 (2020)\n* Processed revenue: $1,637 (2022), $1,556 (2021), $1,301 (2020)\n\nThese revenues are likely related to the company's card services and other business activities. The increase in these revenues from 2020 to 2022 could be driven by various factors such as:\n\n* Increased demand for card services\n* Expansion of new products or services\n* Improved customer retention and loyalty programs\n\nOn the other hand, expenses include:\n\n* Card Member rewards: $14,002 (2022), $11,007 (2021), $8,041 (2020)\n* Business development: $4,943 (2022), $3,762 (2021), $3,051 (2020)\n\nThese expenses are likely related to the company's marketing and business development efforts. The increase in these expenses from 2020 to 2022 could be driven by various factors such as:\n\n* Increased investment in marketing and advertising\n* Expansion of new products or services\n\nThe gross margin for American Express decreased from 2019 to 2022, which may indicate that the company's revenue growth was not fully offset by cost savings or efficiency improvements. However, without more information on the specific drivers of these changes, it is difficult to determine the exact reasons.\n\nIt's worth noting that gross margin may not be a useful metric for a company like American Express, which operates in a highly competitive and dynamic industry with complex revenue streams. Other metrics such as operating income, net interest income, and return on equity (ROE) may provide more insight into the company's financial performance and profitability."
+  },
+  {
+    "example_id": "financebench_id_00651",
+    "question": "Is growth in JnJ's adjusted EPS expected to accelerate in FY2023?",
+    "ground_truth_answer": "No, rate of growth in adjusted EPS is expected to decelerate slightly from 3.6% in FY2022 to 3.5% in FY2023.",
+    "llm_answer": "No, according to the statement, Johnson & Johnson guides 2023 adjusted operational EPS of $10.50, which is a decrease from the previous year's adjusted EPS of $10.15, indicating that growth in JnJ's adjusted EPS is expected to be stable or slightly lower in FY2023."
+  },
+  {
+    "example_id": "financebench_id_01077",
+    "question": "What are major acquisitions that Best Buy has done in FY2023, FY2022 and FY2021?",
+    "ground_truth_answer": "Best Buy closed two acquisitions, both these companies were already partially owned by Best Buy, but Best Buy acquired all outstanding shares of these two companies during FY 2022: (1) Current Health Ltd and (2) Two Peaks, LLC d/b/a Yardbird Furniture",
+    "llm_answer": "Based on the provided text, here are the major acquisitions made by Best Buy:\n\n**Fiscal Year 2023:**\n\n* None mentioned specifically.\n\n**Fiscal Year 2022:**\n\n* Current Health Ltd. (acquired on November 2, 2021) - a care-at-home technology platform\n* Two Peaks, LLC d/b/a Yardbird Furniture (acquired on November 4, 2021) - a direct-to-consumer outdoor furniture company\n\n**Fiscal Year 2021:**\n\n* None mentioned specifically."
+  }
+]
