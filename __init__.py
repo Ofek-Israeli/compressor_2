@@ -19,8 +19,15 @@ __all__ = [
     "reduce_pca",
     "cluster_kmeans",
     "run_pipeline",
+    "generate_processor",
     "get_representatives",
 ]
+
+
+def generate_processor(*args, **kwargs):
+    """Lazy wrapper — avoids importing joblib/transformers at package load."""
+    from .logit_processor_generator import generate_processor as _gen
+    return _gen(*args, **kwargs)
 
 
 def run_pipeline(

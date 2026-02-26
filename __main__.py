@@ -165,6 +165,35 @@ def cmd_pipeline(args: argparse.Namespace) -> None:
         joblib.dump(kmeans, args.kmeans_out)
 
 
+def cmd_generate_processor(args: argparse.Namespace) -> None:
+    from .logit_processor_generator import generate_processor
+
+    generate_processor(
+        kmeans_path=str(args.kmeans),
+        deltas_path=str(args.deltas),
+        output_path=str(args.output),
+        llm_tokenizer=args.tokenizer,
+        embedding_model=args.embedding_model,
+        pca_path=str(args.pca) if args.pca else None,
+        embeddings_path=str(args.embeddings) if args.embeddings else None,
+        pca_random_state=args.pca_random_state,
+        batch_size=args.batch_size,
+    )
+
+
+def cmd_evolve(args: argparse.Namespace) -> None:
+    import logging
+    from .kconfig_loader import load_config
+    from .evolution import run_evolution
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    cfg = load_config(args.config)
+    run_evolution(cfg)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="compressor_2",
@@ -414,6 +443,80 @@ def main() -> None:
         help="Skip loading embeddings for shape validation (faster)",
     )
     p_repr.set_defaults(validate_embeddings=True, func=cmd_representatives)
+
+    # generate-processor
+    p_gen = subparsers.add_parser(
+        "generate-processor",
+        help="Generate a standalone SGLang CustomLogitProcessor .py from KMeans + deltas",
+    )
+    p_gen.add_argument(
+        "kmeans",
+        type=Path,
+        help="Fitted KMeans model (.joblib)",
+    )
+    p_gen.add_argument(
+        "deltas",
+        type=Path,
+        help="Deltas JSON mapping cluster id (str) → delta float",
+    )
+    p_gen.add_argument(
+        "-o", "--output",
+        type=Path,
+        required=True,
+        help="Output .py file for the generated logit processor",
+    )
+    p_gen.add_argument(
+        "--tokenizer",
+        type=str,
+        required=True,
+        metavar="MODEL",
+        help="HuggingFace LLM tokenizer name (e.g. meta-llama/Llama-3.1-8B-Instruct)",
+    )
+    p_gen.add_argument(
+        "--embedding-model",
+        type=str,
+        default="all-MiniLM-L6-v2",
+        help="Sentence-transformers model used in the pipeline (default: all-MiniLM-L6-v2)",
+    )
+    p_gen.add_argument(
+        "--pca",
+        type=Path,
+        default=None,
+        help="Fitted PCA model (.joblib). If omitted, --embeddings is required to re-fit.",
+    )
+    p_gen.add_argument(
+        "--embeddings",
+        type=Path,
+        default=None,
+        help="Original embeddings .npy (used to re-fit PCA when --pca is not provided)",
+    )
+    p_gen.add_argument(
+        "--pca-random-state",
+        type=int,
+        default=None,
+        help="Random state for PCA re-fitting (should match original run)",
+    )
+    p_gen.add_argument(
+        "-b", "--batch-size",
+        type=int,
+        default=512,
+        metavar="N",
+        help="Batch size for embedding the LLM vocab (default: 512)",
+    )
+    p_gen.set_defaults(func=cmd_generate_processor)
+
+    # evolve
+    p_evolve = subparsers.add_parser(
+        "evolve",
+        help="Run the evolution loop: evolve steering deltas via reflector feedback",
+    )
+    p_evolve.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Path to .config file (from 'make menuconfig' or manual)",
+    )
+    p_evolve.set_defaults(func=cmd_evolve)
 
     args = parser.parse_args()
     if hasattr(args, "func"):

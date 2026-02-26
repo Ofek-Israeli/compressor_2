@@ -1,4 +1,11 @@
+joblib
+kconfiglib
+matplotlib
+menuconfig
 numpy
 openai
+pyyaml
+requests
 scikit-learn
 sentence-transformers
+transformers

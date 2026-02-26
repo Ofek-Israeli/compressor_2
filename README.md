@@ -2,25 +2,25 @@
 
 Pipeline: **tokens → embeddings → PCA (d dimensions) → k-means (k clusters)**.
 
-## Install (zsh / macOS)
+## Install (Linux / macOS / zsh or bash)
 
 Run from the **project directory** (where `requirements.txt` lives):
 
-```zsh
-cd /Users/ofek/Library/CloudStorage/OneDrive-Personal/Desktop/Master/Thesis/repos/compressor_2
+```bash
+cd /path/to/compressor_2
 pip install -r requirements.txt
 ```
 
 Or from anywhere, using the full path to `requirements.txt`:
 
-```zsh
-pip install -r /Users/ofek/Library/CloudStorage/OneDrive-Personal/Desktop/Master/Thesis/repos/compressor_2/requirements.txt
+```bash
+pip install -r /path/to/compressor_2/requirements.txt
 ```
 
 To import `compressor_2`, run Python with the **parent** of this directory on `PYTHONPATH`:
 
-```zsh
-cd /Users/ofek/Library/CloudStorage/OneDrive-Personal/Desktop/Master/Thesis/repos
+```bash
+cd /path/to/parent/of/compressor_2
 PYTHONPATH=. python3 -c "from compressor_2 import run_pipeline"
 ```
 
@@ -28,8 +28,8 @@ PYTHONPATH=. python3 -c "from compressor_2 import run_pipeline"
 
 From the **parent** of the `compressor_2` directory (so the package is on `PYTHONPATH`):
 
-```zsh
-cd /Users/ofek/Library/CloudStorage/OneDrive-Personal/Desktop/Master/Thesis/repos
+```bash
+cd /path/to/parent/of/compressor_2
 PYTHONPATH=. python3 -m compressor_2 --help
 ```
 
@@ -45,9 +45,9 @@ PYTHONPATH=. python3 -m compressor_2 --help
 
 **Examples:**
 
-```zsh
+```bash
 # One token per line; output is NumPy .npy
-echo -e "hello\nworld\nfoo" > tokens.txt
+printf 'hello\nworld\nfoo\n' > tokens.txt
 PYTHONPATH=. python3 -m compressor_2 embed tokens.txt -o embeddings.npy -m all-MiniLM-L6-v2
 
 # Embed text files: one vector per token (whitespace-split)
@@ -61,14 +61,14 @@ PYTHONPATH=. python3 -m compressor_2 kmeans reduced.npy -o labels.txt -k 3 --ran
 **K-means with cluster descriptions (gpt-4o):**  
 Requires a text file with whitespace-split tokens (same order as when creating embeddings), and `OPENAI_API_KEY`:
 
-```zsh
+```bash
 PYTHONPATH=. python3 -m compressor_2 kmeans reduced.npy -o labels.txt -k 30 --random-state 42 \
   --text /path/to/tokens.txt --descriptions-out cluster_descriptions.json
 ```
 
 **Full pipeline (tokens → labels in one go):**
 
-```zsh
+```bash
 PYTHONPATH=. python3 -m compressor_2 pipeline tokens.txt -o labels.txt -d 8 -k 3 --random-state 42
 ```
 
