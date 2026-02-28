@@ -1,0 +1,299 @@
+#
+# compressor_2 Evolution Configuration
+#
+# Defines all options for the delta-evolution loop.
+# Use 'make menuconfig' for interactive configuration.
+#
+
+mainmenu "compressor_2 Evolution Configuration"
+
+#
+# Data Paths
+#
+menu "Data Paths"
+
+config FINANCEBENCH_JSONL
+	string "FinanceBench dataset JSONL path"
+	default "../minions/evaluate/data/financebench_open_source.jsonl"
+	help
+	  Path to the FinanceBench dataset JSONL file.
+
+config FINANCEBENCH_POOL_INDICES
+	string "Pool example indices (comma-separated, or 'all')"
+	default "all"
+	help
+	  Comma-separated 0-based indices to form the example pool,
+	  or 'all' to use every example. The minibatch is randomly
+	  sampled from this pool each iteration.
+
+config CLUSTER_DESCRIPTIONS_PATH
+	string "cluster_descriptions.json path"
+	default "outputs/cluster_descriptions.json"
+	help
+	  Path to cluster_descriptions.json (cluster id -> description).
+
+config INITIAL_DELTAS_PATH
+	string "Initial deltas JSON path"
+	default "outputs/deltas_examples.json"
+	help
+	  Path to the initial deltas JSON file (cluster id -> float).
+	  Used as the starting point for evolution.
+
+config KMEANS_PATH
+	string "Fitted KMeans model (.joblib)"
+	default "outputs/labels_kmeans.joblib"
+	help
+	  Path to the fitted KMeans model from the pipeline.
+
+config EMBEDDINGS_PATH
+	string "Embeddings .npy path"
+	default "outputs/embeddings.npy"
+	help
+	  Path to token embeddings .npy (for generate-processor PCA re-fit).
+
+config OUTPUT_DIR
+	string "Evolution output directory"
+	default "outputs/evolution"
+	help
+	  Directory for evolution outputs: deltas, processors, graphs, logs.
+
+endmenu
+
+#
+# Evolution Parameters
+#
+menu "Evolution Parameters"
+
+config MINIBATCH_SIZE
+	int "Minibatch size (examples per iteration)"
+	default 5
+	range 1 50
+	help
+	  Number of FinanceBench examples to run per evolution iteration.
+
+config SHORTNESS_SCALE
+	int "Shortness score scale (tokens)"
+	default 300
+	range 50 2000
+	help
+	  Scale used in shortness_score = 1/(1 + mean_tok_len/scale).
+	  Higher values make the shortness component less sensitive to length.
+
+config MAX_ITERATIONS
+	int "Maximum evolution iterations"
+	default 20
+	range 1 1000
+	help
+	  Maximum number of evolution iterations to run.
+
+endmenu
+
+#
+# Correctness (learning_grammar)
+#
+menu "Correctness"
+
+config CORRECTNESS_MODEL
+	string "Correctness evaluator model"
+	default "gpt-4o"
+	help
+	  OpenAI model for per-example correctness evaluation (learning_grammar).
+
+config CORRECTNESS_TOLERANCE
+	string "Numerical tolerance (e.g. 0.10 for 10%%)"
+	default "0.10"
+	help
+	  Tolerance for numerical answers in correctness evaluation.
+
+config MINIONS_REPO
+	string "Minions repo path (for correctness evaluator)"
+	default "/workspace/minions_channel"
+	help
+	  Path to minions_channel repo; learning_grammar correctness uses it.
+
+endmenu
+
+#
+# SGLang Server
+#
+menu "SGLang Server"
+
+config SGLANG_MODEL_PATH
+	string "Model path (--model-path)"
+	default "meta-llama/Llama-3.1-8B-Instruct"
+	help
+	  HuggingFace model name or local path for the SGLang server.
+	  Must match the tokenizer used by generate-processor.
+
+config SGLANG_PORT
+	int "Server port"
+	default 8000
+	range 1024 65535
+	help
+	  Port for the SGLang server.
+
+config SGLANG_EXTRA_ARGS
+	string "Extra SGLang launch args"
+	default ""
+	help
+	  Additional arguments passed to sglang.launch_server
+	  (space-separated, e.g. --tp 2 --mem-fraction-static 0.8).
+
+config SGLANG_HEALTH_TIMEOUT
+	int "Health check timeout (seconds)"
+	default 300
+	range 30 900
+	help
+	  Maximum time to wait for SGLang health endpoint after start.
+
+config SGLANG_HEALTH_INTERVAL
+	int "Health check retry interval (seconds)"
+	default 5
+	range 1 30
+	help
+	  Seconds between health endpoint retries.
+
+endmenu
+
+#
+# FinanceBench Runner
+#
+menu "FinanceBench Runner"
+
+config RUNNER_CONFIG_PATH
+	string "financebench_runner YAML config path"
+	default "financebench_runner/.config.yaml"
+	help
+	  Path to the YAML config used by financebench_runner for
+	  minibatch runs (model_id, temperature, prompt_template, etc.).
+
+config RUNNER_TIMEOUT_S
+	int "SGLang request timeout (seconds) for minibatch"
+	default 300
+	range 60 3600
+	help
+	  Timeout for each SGLang completion request during minibatch runs.
+	  Increase if inference is slow (e.g. 300 or 600 to avoid read timeouts).
+
+endmenu
+
+#
+# Reflector (GPT-4o)
+#
+menu "Reflector"
+
+config REFLECTOR_MODEL
+	string "Reflector model"
+	default "gpt-4o"
+	help
+	  OpenAI model name for the reflector (e.g. gpt-4o).
+
+config OPENAI_API_KEY_ENV
+	string "OpenAI API key environment variable"
+	default "OPENAI_API_KEY"
+	help
+	  Name of the environment variable holding the OpenAI API key.
+
+config REFLECTOR_TEMPERATURE
+	string "Reflector sampling temperature"
+	default "0.7"
+	help
+	  Sampling temperature for the reflector LM.
+
+endmenu
+
+#
+# Generate Processor
+#
+menu "Generate Processor"
+
+config EMBEDDING_MODEL
+	string "Sentence-transformers embedding model"
+	default "all-MiniLM-L6-v2"
+	help
+	  Model used by generate-processor to embed the LLM vocab.
+
+config GEN_BATCH_SIZE
+	int "Embedding batch size"
+	default 512
+	range 32 4096
+	help
+	  Batch size for embedding the LLM vocabulary.
+
+endmenu
+
+#
+# Genetic Algorithm (DEAP)
+#
+menu "Genetic Algorithm (DEAP)"
+
+config LAMBDA_SHORTNESS
+	string "Fitness weight: shortness (float in [0,1])"
+	default ""
+	help
+	  Weight for the shortness component of fitness.
+	  Required — loader raises at startup if empty.
+
+config LAMBDA_CORRECTNESS
+	string "Fitness weight: correctness (float in [0,1])"
+	default ""
+	help
+	  Weight for the correctness component of fitness.
+	  Required — loader raises at startup if empty.
+
+config POPULATION_SIZE
+	int "Population size"
+	default -1
+	help
+	  Number of individuals in the population.
+	  Required — loader raises at startup if -1.
+
+config NGEN
+	int "Number of generations"
+	default -1
+	help
+	  Number of generations to run (0-based: 0..NGEN-1).
+	  Required — loader raises at startup if -1.
+
+config CXPB
+	string "Crossover probability (float in [0,1])"
+	default ""
+	help
+	  Probability of applying crossover per parent pair.
+	  Required — loader raises at startup if empty.
+
+config MUTPB
+	string "Mutation probability (float in [0,1])"
+	default ""
+	help
+	  Probability of applying reflector mutation per offspring.
+	  Required — loader raises at startup if empty.
+
+config ELITISM_SIZE
+	int "Elitism size"
+	default -1
+	help
+	  Number of top individuals carried over unchanged to the next generation.
+	  Required — loader raises at startup if -1.
+
+config SELECTION
+	string "Selection method ('tournament' or 'truncation')"
+	default ""
+	help
+	  Parent selection method. Required — loader raises at startup if empty.
+
+config TOURNAMENT_SIZE
+	int "Tournament size (when SELECTION=tournament)"
+	default -1
+	help
+	  Number of individuals per tournament. Required when SELECTION=tournament.
+	  Validation: >= 2 and <= POPULATION_SIZE.
+
+config TRUNCATION_TOP_K
+	int "Truncation top-K (when SELECTION=truncation)"
+	default -1
+	help
+	  Number of top individuals forming the parent pool.
+	  Validation: >= 2 (and optionally <= POPULATION_SIZE).
+
+endmenu
