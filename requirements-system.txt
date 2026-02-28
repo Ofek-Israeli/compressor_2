@@ -1,0 +1,10 @@
+# System packages required for compressor_2 evolution (Debian/Ubuntu).
+# Install: make install_requirements (or see requirements.txt)
+#
+# SGLang runtime
+libnuma1
+#
+# Evolution tree: compile evolution_tree.tex -> PDF -> PNG
+# (pdflatex + TikZ/standalone from texlive; pdftoppm for PNG)
+texlive-latex-extra
+poppler-utils
