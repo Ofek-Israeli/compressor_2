@@ -119,12 +119,15 @@ def _safe_float(v: Dict[str, object], key: str, default: float) -> float:
     return float(raw)
 
 
-def load_config(config_path: str) -> EvolutionConfig:
+def load_config(config_path: str, validate_ga: bool = True) -> EvolutionConfig:
     """Load a .config file and return an EvolutionConfig.
 
     All path options (paths to files or directories) are resolved relative to
     the directory containing the config file when they are relative. This
     allows the same .config to work regardless of current working directory.
+
+    If validate_ga is False, GA options are not validated (for use by
+    generate-evolution-processors when only path/embedding options are needed).
     """
     p = Path(config_path).resolve()
     if not p.exists():
@@ -171,6 +174,7 @@ def load_config(config_path: str) -> EvolutionConfig:
         truncation_top_k=int(v.get("TRUNCATION_TOP_K", -1)),
     )
 
-    _validate_ga_options(cfg)
+    if validate_ga:
+        _validate_ga_options(cfg)
 
     return cfg

@@ -10,7 +10,7 @@ help:
 	@echo "compressor_2 Evolution - Available targets:"
 	@echo ""
 	@echo "  Setup:"
-	@echo "    install_requirements  - Install Python deps (pip install -r requirements.txt)"
+	@echo "    install_requirements  - Install Python deps + system deps (pdflatex, poppler, libnuma)"
 	@echo ""
 	@echo "  Configuration:"
 	@echo "    menuconfig     - Interactive configuration menu (ncurses)"
@@ -26,6 +26,17 @@ help:
 
 install_requirements:
 	pip install -r requirements.txt
+	@if [ -f requirements-system.txt ]; then \
+		echo "Installing system packages from requirements-system.txt ..."; \
+		SYS_PKGS="libnuma1 texlive-latex-extra poppler-utils"; \
+		if [ "$$(id -u)" = 0 ]; then \
+			apt-get update && apt-get install -y $$SYS_PKGS; \
+		else \
+			sudo apt-get update && sudo apt-get install -y $$SYS_PKGS; \
+		fi; \
+	else \
+		echo "requirements-system.txt not found; skipping system packages"; \
+	fi
 
 menuconfig:
 	@python3 -c "from kconfiglib import Kconfig; import menuconfig; \
@@ -64,9 +75,10 @@ clean:
 	rm -f outputs/evolution/cot_summary.txt
 	rm -f outputs/evolution/processor.py
 	rm -f outputs/evolution/processor_best.py
+	rm -f outputs/evolution/deltas_gen_*.json
+	rm -f outputs/evolution/processor_gen_*.py
 	rm -f outputs/evolution/evolution_lengths.png
 	rm -f outputs/evolution/ga_fitness.png
-	rm -f outputs/evolution/ga_objective.png
 	rm -f outputs/evolution/evolution_state.json
 	rm -f outputs/evolution/ga_history.json
 	rm -f outputs/evolution/evolution_tree.json

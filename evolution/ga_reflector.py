@@ -1,7 +1,7 @@
 """
 GA Reflector: mutation and scratchpad-merge calls for the DEAP evolution loop.
 
-Mutation: driver pre-selects a target cluster; reflector proposes a new delta + scratchpad.
+Mutation: reflector proposes a full new delta vector (all clusters) + scratchpad.
 Merge: given two parent scratchpads + fitness values, reflector produces a merged scratchpad.
 """
 
@@ -25,15 +25,15 @@ LOG = logging.getLogger(__name__)
 
 MUTATION_SYSTEM_PROMPT = (
     "You are a reflector for a steering system that adjusts LLM outputs by cluster. "
-    "Your task is to propose a new delta value for a specific target cluster (chosen by "
-    "the driver) to reduce verbosity without harming correctness. You receive: (1) cluster "
-    "descriptions, (2) the current delta vector and scratchpad for this individual, (3) the "
-    "target cluster to mutate, (4) training-set responses with per-example correctness and "
-    "explanation. The target cluster is fixed for this call; you MUST change its delta to a "
-    "new value (different from the current value). All other clusters remain unchanged. "
-    'Output only a JSON object with two fields: "delta" (number), "scratchpad" (string \u2014 '
-    "your updated scratchpad for this evolution path, appending what you learnt this step). "
-    "Negative deltas discourage tokens in that cluster. No other commentary."
+    "Your task is to propose a complete new delta vector (one value per cluster) to "
+    "reduce verbosity without harming correctness. You receive: (1) cluster descriptions, "
+    "(2) the current delta vector and scratchpad for this individual, (3) minibatch "
+    "responses with per-example correctness and explanation. You MUST return a new delta "
+    "vector that differs from the current one in at least one cluster. Negative deltas "
+    "discourage tokens in that cluster; positive deltas encourage them. "
+    'Output only a JSON object with two fields: "deltas" (object mapping cluster id '
+    'string to number), "scratchpad" (string \u2014 your updated scratchpad for this '
+    "evolution path, appending what you learnt this step). No other commentary."
 )
 
 MUTATION_USER_TEMPLATE = """\
@@ -46,31 +46,32 @@ MUTATION_USER_TEMPLATE = """\
 ## Current scratchpad
 {current_scratchpad}
 
-## Target cluster to mutate (must change)
-{target_cluster_id}
-
-## Training-set responses (correctness and explanation per example)
+## Minibatch responses (correctness and explanation per example)
 {all_responses_with_correctness}
 
 ---
-Propose a new delta value for the target cluster above to improve shortness without \
-harming correctness. The delta MUST be different from the current value for that cluster. \
-All other clusters remain unchanged. Update the scratchpad with what you learnt. \
-Output only: {{"delta": <float>, "scratchpad": "<string>"}}.\
+Propose a complete new delta vector (all clusters) to improve shortness without harming \
+correctness. At least one cluster delta MUST differ from the current value. Update the \
+scratchpad with what you learnt. \
+IMPORTANT: Internally go cluster-by-cluster and decide keep/increase/decrease for each delta. 
+Output only: {{"deltas": {{"<cluster_id>": <float>, ...}}, "scratchpad": "<string>"}}.\
 """
 
 MUTATION_RESPONSE_SCHEMA = {
     "type": "json_schema",
     "json_schema": {
         "name": "mutation_output",
-        "strict": True,
+        "strict": False,
         "schema": {
             "type": "object",
             "properties": {
-                "delta": {"type": "number"},
+                "deltas": {
+                    "type": "object",
+                    "additionalProperties": {"type": "number"},
+                },
                 "scratchpad": {"type": "string"},
             },
-            "required": ["delta", "scratchpad"],
+            "required": ["deltas", "scratchpad"],
             "additionalProperties": False,
         },
     },
@@ -102,14 +103,13 @@ def call_mutation_reflector(
     cluster_descriptions: Dict[str, Any],
     current_deltas: Dict[str, float],
     scratchpad: str,
-    target_cluster_id: str,
     training_results: List[Dict[str, Any]],
     *,
     output_dir: Optional[str] = None,
     generation: int = 0,
     index: int = 0,
-) -> Optional[Tuple[float, str]]:
-    """Call the reflector for mutation. Returns (new_delta, new_scratchpad) or None on failure."""
+) -> Optional[Tuple[Dict[str, float], str]]:
+    """Call the reflector for mutation. Returns (new_deltas_dict, new_scratchpad) or None on failure."""
     api_key = os.environ.get(cfg.openai_api_key_env)
     if not api_key:
         raise RuntimeError(f"Environment variable {cfg.openai_api_key_env} is not set")
@@ -117,8 +117,7 @@ def call_mutation_reflector(
     user_content = MUTATION_USER_TEMPLATE.format(
         cluster_descriptions_json=json.dumps(cluster_descriptions, indent=2),
         current_deltas_json=json.dumps(current_deltas, indent=2),
-        current_scratchpad=scratchpad or "(empty — first mutation on this lineage)",
-        target_cluster_id=target_cluster_id,
+        current_scratchpad=scratchpad or "(empty \u2014 first mutation on this lineage)",
         all_responses_with_correctness=_format_responses(training_results),
     )
     messages = [
@@ -129,9 +128,8 @@ def call_mutation_reflector(
     if output_dir is not None:
         log_reflector_call(messages, "mutation", generation, index, output_dir)
 
-    current_val = current_deltas.get(target_cluster_id, 0.0)
-
     client = OpenAI(api_key=api_key)
+    expected_keys = set(current_deltas.keys())
 
     for attempt in range(2):
         try:
@@ -143,22 +141,37 @@ def call_mutation_reflector(
             )
             raw = response.choices[0].message.content
             data = json.loads(raw)
-            delta = data.get("delta")
+            new_deltas = data.get("deltas")
             new_scratchpad = data.get("scratchpad", "")
 
-            if not isinstance(delta, (int, float)):
-                LOG.warning("Mutation attempt %d: delta not numeric (%r)", attempt + 1, delta)
-                continue
-            delta = float(delta)
-
-            if abs(delta - current_val) < 1e-9:
-                LOG.warning(
-                    "Mutation attempt %d: delta unchanged (%.6f == %.6f)",
-                    attempt + 1, delta, current_val,
-                )
+            if not isinstance(new_deltas, dict):
+                LOG.warning("Mutation attempt %d: deltas not a dict (%r)", attempt + 1, type(new_deltas))
                 continue
 
-            return delta, str(new_scratchpad)
+            parsed: Dict[str, float] = {}
+            bad = False
+            for k in expected_keys:
+                v = new_deltas.get(k)
+                if v is None:
+                    LOG.warning("Mutation attempt %d: missing cluster %s", attempt + 1, k)
+                    bad = True
+                    break
+                if not isinstance(v, (int, float)):
+                    LOG.warning("Mutation attempt %d: cluster %s not numeric (%r)", attempt + 1, k, v)
+                    bad = True
+                    break
+                parsed[k] = float(v)
+            if bad:
+                continue
+
+            changed = any(
+                abs(parsed[k] - current_deltas.get(k, 0.0)) > 1e-9 for k in expected_keys
+            )
+            if not changed:
+                LOG.warning("Mutation attempt %d: all deltas unchanged", attempt + 1)
+                continue
+
+            return parsed, str(new_scratchpad)
 
         except Exception:
             LOG.exception("Mutation reflector call failed (attempt %d)", attempt + 1)

@@ -194,6 +194,22 @@ def cmd_evolve(args: argparse.Namespace) -> None:
     run_evolution(cfg)
 
 
+def cmd_generate_evolution_processors(args: argparse.Namespace) -> None:
+    """Generate processor_*.py from deltas_*.json in evolution output dir. Run after evolution when GPU is free."""
+    import logging
+    from pathlib import Path
+    from .kconfig_loader import load_config
+    from .evolution.ga_driver import generate_evolution_processors
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    cfg = load_config(args.config, validate_ga=False)
+    out_dir = Path(args.output_dir) if args.output_dir else Path(cfg.output_dir)
+    generate_evolution_processors(cfg, out_dir)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="compressor_2",
@@ -517,6 +533,25 @@ def main() -> None:
         help="Path to .config file (from 'make menuconfig' or manual)",
     )
     p_evolve.set_defaults(func=cmd_evolve)
+
+    # generate-evolution-processors: run after evolve when GPU is free
+    p_gen_evol = subparsers.add_parser(
+        "generate-evolution-processors",
+        help="Generate processor_*.py from deltas_*.json in evolution output dir (run after evolve when GPU is free)",
+    )
+    p_gen_evol.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Path to .config file (same as for evolve)",
+    )
+    p_gen_evol.add_argument(
+        "--output-dir",
+        type=str,
+        default=None,
+        help="Evolution output directory (default: OUTPUT_DIR from config)",
+    )
+    p_gen_evol.set_defaults(func=cmd_generate_evolution_processors)
 
     args = parser.parse_args()
     if hasattr(args, "func"):

@@ -85,6 +85,7 @@ class SGLangServer:
         interval = self._cfg.sglang_health_interval
         while time.monotonic() < deadline:
             if self._proc is not None and self._proc.poll() is not None:
+                self._log_stderr_on_exit()
                 raise RuntimeError(
                     f"SGLang process exited with code {self._proc.returncode} during health wait"
                 )
@@ -99,3 +100,15 @@ class SGLangServer:
         raise RuntimeError(
             f"SGLang did not become healthy within {self._cfg.sglang_health_timeout}s"
         )
+
+    def _log_stderr_on_exit(self) -> None:
+        """Read and log subprocess stderr when the process has exited (for debugging)."""
+        if self._proc is None or self._proc.stderr is None:
+            return
+        try:
+            stderr_bytes = self._proc.stderr.read()
+            if stderr_bytes:
+                stderr_text = stderr_bytes.decode("utf-8", errors="replace")
+                LOG.error("SGLang stderr:\n%s", stderr_text.rstrip())
+        except Exception:
+            LOG.exception("Failed to read SGLang stderr")

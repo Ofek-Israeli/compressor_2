@@ -1,3 +1,12 @@
+# compressor_2 evolution dependencies
+#
+# 1. Python deps (this file):
+#    pip install -r requirements.txt
+#
+# 2. System packages (pdflatex, pdftoppm, libnuma for SGLang): see requirements-system.txt
+#    Debian/Ubuntu: xargs -a requirements-system.txt sudo apt-get install -y
+#    (Required for evolution tree PDF/PNG; SGLang needs libnuma1.)
+
 deap
 joblib
 kconfiglib
@@ -8,4 +17,6 @@ pyyaml
 requests
 scikit-learn
 sentence-transformers
+sgl_kernel
+sglang
 transformers

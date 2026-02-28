@@ -61,23 +61,6 @@ def _deltas_list_to_dict(lst: List[float], cluster_ids: List[str]) -> Dict[str, 
 
 
 # ---------------------------------------------------------------------------
-# Round-robin state for mutation target cluster
-# ---------------------------------------------------------------------------
-
-class RRState:
-    """Mutable round-robin state closed over by the mutate operator."""
-
-    def __init__(self, cluster_ids: List[str], rr_idx: int = 0):
-        self.cluster_ids = cluster_ids
-        self.rr_idx = rr_idx
-
-    def next_target(self) -> str:
-        cid = self.cluster_ids[self.rr_idx]
-        self.rr_idx = (self.rr_idx + 1) % len(self.cluster_ids)
-        return cid
-
-
-# ---------------------------------------------------------------------------
 # Processor generation and training-set evaluation
 # ---------------------------------------------------------------------------
 
@@ -96,6 +79,27 @@ def _generate_processor(cfg: EvolutionConfig, deltas_path: str, output_path: str
     if result.returncode != 0:
         LOG.error("generate-processor stderr:\n%s", result.stderr)
         raise RuntimeError(f"generate-processor failed (exit {result.returncode})")
+
+
+def generate_evolution_processors(cfg: EvolutionConfig, out_dir: Path) -> None:
+    """Generate processor_*.py from all deltas_*.json in out_dir. Run after evolution when GPU is free."""
+    out_dir = Path(out_dir)
+    if not out_dir.is_dir():
+        raise FileNotFoundError(f"Output directory not found: {out_dir}")
+    deltas_files = sorted(out_dir.glob("deltas_*.json"))
+    if not deltas_files:
+        LOG.warning("No deltas_*.json found in %s", out_dir)
+        return
+    for deltas_path in deltas_files:
+        # deltas_best.json -> processor_best.py; deltas_gen_000.json -> processor_gen_000.py
+        stem = deltas_path.stem
+        if not stem.startswith("deltas_"):
+            continue
+        processor_name = stem[7:]  # strip "deltas_"
+        processor_path = out_dir / f"processor_{processor_name}.py"
+        LOG.info("Generating %s from %s", processor_path.name, deltas_path.name)
+        _generate_processor(cfg, str(deltas_path), str(processor_path))
+    LOG.info("Generated %d processor(s) in %s", len(deltas_files), out_dir)
 
 
 def _build_runner_config(
@@ -242,7 +246,6 @@ def _save_state(
     population: List[Any],
     best_individual: Any,
     best_fitness: Optional[float],
-    rr_state: RRState,
     cluster_ids: List[str],
 ) -> None:
     state = {
@@ -263,7 +266,6 @@ def _save_state(
             else None
         ),
         "best_fitness": best_fitness,
-        "rr_idx": rr_state.rr_idx,
     }
     _save_json(state, str(out_dir / "evolution_state.json"))
 
@@ -289,14 +291,25 @@ def _save_best_processor(
     cluster_ids: List[str],
     out_dir: Path,
 ) -> None:
-    """Save best individual's deltas and generate its processor."""
+    """Save best individual's deltas to deltas_best.json. Run generate-evolution-processors later to produce processor_best.py."""
     deltas = _deltas_list_to_dict(list(best_ind), cluster_ids)
     best_deltas_path = str(out_dir / "deltas_best.json")
     _save_json(deltas, best_deltas_path)
-    try:
-        _generate_processor(cfg, best_deltas_path, str(out_dir / "processor_best.py"))
-    except Exception:
-        LOG.exception("Failed to generate best processor (non-fatal)")
+
+
+def _save_generation_best_processor(
+    gen: int,
+    best_ind: Any,
+    cfg: EvolutionConfig,
+    cluster_ids: List[str],
+    out_dir: Path,
+) -> None:
+    """Save this generation's best deltas to deltas_gen_XXX.json. Run generate-evolution-processors later to produce processor_*.py."""
+    deltas = _deltas_list_to_dict(list(best_ind), cluster_ids)
+    suffix = f"gen_{gen:03d}"
+    deltas_path = str(out_dir / f"deltas_{suffix}.json")
+    _save_json(deltas, deltas_path)
+    LOG.info("Gen %d best deltas saved: %s (fitness=%.4f)", gen, deltas_path, best_ind.fitness.values[0])
 
 
 # ---------------------------------------------------------------------------
@@ -468,6 +481,7 @@ def _compile_tree_png(tree: EvolutionTree, out_dir: Path) -> None:
             return
 
         pdf_path = out_dir / "evolution_tree.pdf"
+        LOG.info("Tree PDF: %s", pdf_path)
         png_base = str(out_dir / "evolution_tree")
 
         if shutil.which("pdftoppm") is None:
@@ -514,15 +528,15 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
     cfg.expected_cluster_ids = cluster_ids
     LOG.info("Cluster IDs (%d): %s", M, cluster_ids)
 
-    # ---- Training set (fixed for the whole run) ----
+    # ---- Example pool (fixed for the whole run) ----
     from financebench_runner.data import load_financebench
 
     all_examples = load_financebench(cfg.financebench_jsonl)
     if cfg.pool_indices is not None:
-        training_indices = [i for i in cfg.pool_indices if 0 <= i < len(all_examples)]
+        pool_indices = [i for i in cfg.pool_indices if 0 <= i < len(all_examples)]
     else:
-        training_indices = list(range(len(all_examples)))
-    LOG.info("Training set: %d examples (fixed)", len(training_indices))
+        pool_indices = list(range(len(all_examples)))
+    LOG.info("Pool: %d examples, minibatch size: %d", len(pool_indices), cfg.minibatch_size)
 
     # ---- Tokenizer ----
     from transformers import AutoTokenizer
@@ -537,9 +551,6 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
 
     toolbox = base.Toolbox()
     toolbox.register("clone", copy.deepcopy)
-
-    # ---- Round-robin state ----
-    rr_state = RRState(cluster_ids, rr_idx=0)
 
     # ---- Server state (mutable, shared across evaluations) ----
     server_holder: Dict[str, Any] = {"server": None}
@@ -556,7 +567,6 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
 
     if saved is not None:
         generation_start = saved["generation"] + 1
-        rr_state.rr_idx = saved.get("rr_idx", 0)
         population = [
             _restore_individual(d, cluster_ids) for d in saved["population"]
         ]
@@ -574,8 +584,8 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
             except Exception:
                 LOG.warning("Could not load ga_history.json; starting with empty history")
         LOG.info(
-            "Resumed from generation %d (rr_idx=%d, best_fitness=%s)",
-            saved["generation"], rr_state.rr_idx,
+            "Resumed from generation %d (best_fitness=%s)",
+            saved["generation"],
             f"{best_fitness:.4f}" if best_fitness is not None else "N/A",
         )
     else:
@@ -608,17 +618,42 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
             last_gen = gen
             LOG.info("========== Generation %d / %d ==========", gen, cfg.ngen - 1)
 
-            # ---- (1) Evaluate all individuals that need it ----
-            for i, ind in enumerate(population):
-                if not ind.fitness.valid:
+            # ---- Sample minibatch for this generation ----
+            if cfg.minibatch_size >= len(pool_indices):
+                minibatch_indices = list(pool_indices)
+            else:
+                minibatch_indices = random.sample(pool_indices, cfg.minibatch_size)
+            LOG.info("Gen %d minibatch: %d examples (indices: %s)", gen, len(minibatch_indices), minibatch_indices)
+
+            # Invalidate all fitness so everyone is evaluated on the new minibatch
+            for ind in population:
+                if ind.fitness.valid:
+                    del ind.fitness.values
+
+            # ---- (1) Evaluate all individuals ----
+            # If all individuals have the same genome (e.g. gen 0 clones), evaluate once and assign to all
+            ref = list(population[0])
+            all_same_genome = all(list(ind) == ref for ind in population)
+            if all_same_genome and len(population) > 1:
+                LOG.info("All %d individuals share the same genome; evaluating once.", len(population))
+                fit, results = _evaluate_individual(
+                    population[0], cfg, cluster_ids, minibatch_indices,
+                    tokenizer, server_holder, out_dir,
+                )
+                for i, ind in enumerate(population):
+                    ind.fitness.values = (fit,)
+                    ind.training_results = copy.deepcopy(results)
+                    tree.add_pop_node(gen, i, fit)
+            else:
+                for i, ind in enumerate(population):
                     LOG.info("Evaluating pop[%d] …", i)
                     fit, results = _evaluate_individual(
-                        ind, cfg, cluster_ids, training_indices,
+                        ind, cfg, cluster_ids, minibatch_indices,
                         tokenizer, server_holder, out_dir,
                     )
                     ind.fitness.values = (fit,)
                     ind.training_results = results
-                tree.add_pop_node(gen, i, ind.fitness.values[0])
+                    tree.add_pop_node(gen, i, ind.fitness.values[0])
 
             # ---- Elitism: select elites NOW (before offspring) ----
             elites = tools.selBest(population, cfg.elitism_size)
@@ -683,7 +718,7 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
 
                 LOG.info("Evaluating offspring[%d] …", j)
                 fit, results = _evaluate_individual(
-                    child, cfg, cluster_ids, training_indices,
+                    child, cfg, cluster_ids, minibatch_indices,
                     tokenizer, server_holder, out_dir,
                 )
                 child.fitness.values = (fit,)
@@ -693,19 +728,18 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
                     LOG.info("Mutating offspring[%d] …", j)
                     pre_nid = f"g{gen}_child{j}_pre"
 
-                    c_target = rr_state.next_target()
                     deltas_dict = _deltas_list_to_dict(list(child), cluster_ids)
 
                     mutation_result = call_mutation_reflector(
                         cfg, cluster_descriptions, deltas_dict,
-                        child.scratchpad, c_target, results,
+                        child.scratchpad, results,
                         output_dir=str(out_dir), generation=gen, index=j,
                     )
 
                     if mutation_result is not None:
-                        new_delta, new_scratchpad = mutation_result
-                        target_idx = cluster_ids.index(c_target)
-                        child[target_idx] = new_delta
+                        new_deltas_dict, new_scratchpad = mutation_result
+                        for idx_c, cid in enumerate(cluster_ids):
+                            child[idx_c] = new_deltas_dict[cid]
                         child.scratchpad = new_scratchpad
                         del child.fitness.values
 
@@ -713,7 +747,7 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
 
                         LOG.info("Re-evaluating mutated offspring[%d] …", j)
                         fit2, results2 = _evaluate_individual(
-                            child, cfg, cluster_ids, training_indices,
+                            child, cfg, cluster_ids, minibatch_indices,
                             tokenizer, server_holder, out_dir,
                         )
                         child.fitness.values = (fit2,)
@@ -747,19 +781,23 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
                 best_fitness if best_fitness is not None else 0,
             )
 
-            _save_state(out_dir, gen, population, best_individual, best_fitness, rr_state, cluster_ids)
+            _save_state(out_dir, gen, population, best_individual, best_fitness, cluster_ids)
             _save_json(gen_history, str(out_dir / "ga_history.json"))
             _save_json(tree.to_dict(), str(out_dir / "evolution_tree.json"))
-
-            if best_individual is not None:
-                _save_best_processor(best_individual, cfg, cluster_ids, out_dir)
-
-            _update_fitness_graph(gen_history, str(out_dir))
-
             try:
                 _compile_tree_png(tree, out_dir)
             except Exception:
                 LOG.exception("Tree PNG compilation failed (non-fatal)")
+
+            if best_individual is not None:
+                _save_best_processor(best_individual, cfg, cluster_ids, out_dir)
+
+            # Save and log best processor of this generation
+            if population and all(ind.fitness.valid for ind in population):
+                gen_best = tools.selBest(population, 1)[0]
+                _save_generation_best_processor(gen, gen_best, cfg, cluster_ids, out_dir)
+
+            _update_fitness_graph(gen_history, str(out_dir))
 
             if interrupted:
                 break
@@ -776,7 +814,7 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
 
         _save_state(
             out_dir, last_gen, population,
-            best_individual, best_fitness, rr_state, cluster_ids,
+            best_individual, best_fitness, cluster_ids,
         )
         _save_json(tree.to_dict(), str(out_dir / "evolution_tree.json"))
 
@@ -873,17 +911,7 @@ def _update_fitness_graph(history: List[Dict[str, Any]], output_dir: str) -> Non
     ax.set_title("GA Evolution: Fitness vs Generation")
     ax.legend()
     ax.grid(True, alpha=0.3)
+    ax.set_ylim(bottom=0)
 
     fig.savefig(str(out / "ga_fitness.png"), dpi=120, bbox_inches="tight")
     plt.close(fig)
-
-    # Dedicated graph: objective (best logit processor so far) vs generation
-    fig2, ax2 = plt.subplots(figsize=(8, 4))
-    ax2.plot(gens, best_ever, "o-", color="C2", linewidth=2, markersize=6)
-    ax2.set_xlabel("Generation")
-    ax2.set_ylabel("Objective (fitness)")
-    ax2.set_title("Objective: Best logit processor so far vs generation")
-    ax2.grid(True, alpha=0.3)
-    ax2.set_ylim(bottom=0)
-    fig2.savefig(str(out / "ga_objective.png"), dpi=120, bbox_inches="tight")
-    plt.close(fig2)
