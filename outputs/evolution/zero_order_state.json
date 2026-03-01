@@ -1,0 +1,13 @@
+{
+  "method": "optuna_tpe",
+  "n_evals_used": 0,
+  "max_evals": 500,
+  "remaining_evals": 500,
+  "best_x": null,
+  "best_f": null,
+  "best_eval_id": null,
+  "optimizer_seed": 0,
+  "eval_seed": 42,
+  "indices_hash": "18a0876c59936515",
+  "history_path": "/workspace/compressor_2/outputs/evolution/zero_order_history.jsonl"
+}
