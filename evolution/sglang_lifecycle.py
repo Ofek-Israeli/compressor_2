@@ -1,10 +1,19 @@
 """
 SGLang server lifecycle: start, stop, and health-check.
+
+Evolution runs on a 2-GPU pod.  SGLang is pinned to the **second** visible
+GPU (cuda:1) via a CUDA_VISIBLE_DEVICES shim in :meth:`SGLangServer.start`
+because SGLang's ``launch_server`` does not support a ``--device`` flag.
+The shim restricts the child process to the single physical GPU whose index
+is passed as *sglang_gpu_id* by the caller (computed from the parent's
+CUDA_VISIBLE_DEVICES; see :func:`evolution.ga_driver._validate_2_gpus`).
+See docs/2XGPU_pod_plan.md §3 / §7.2.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import shlex
 import signal
 import subprocess
@@ -19,11 +28,26 @@ LOG = logging.getLogger(__name__)
 
 
 class SGLangServer:
-    """Manages an SGLang server subprocess."""
+    """Manages an SGLang server subprocess pinned to a single GPU.
 
-    def __init__(self, cfg: EvolutionConfig, processor_path: str):
+    The server is started **once** and kept running across all evaluations.
+    Each evaluation's logit processor is sent per-request by the runner
+    client (via ``custom_logit_processor`` in the JSON payload), so the
+    server does not need to be restarted when switching processors.
+
+    *sglang_gpu_id* is the **physical** GPU index string (e.g. ``"1"`` or
+    ``"3"``) for the SGLang process.  It is used in a CUDA_VISIBLE_DEVICES
+    shim because SGLang does not support a ``--device`` flag.
+    """
+
+    def __init__(
+        self,
+        cfg: EvolutionConfig,
+        processor_path: Optional[str] = None,
+        sglang_gpu_id: str = "1",
+    ):
         self._cfg = cfg
-        self._processor_path = processor_path
+        self._sglang_gpu_id = sglang_gpu_id
         self._proc: Optional[subprocess.Popen] = None
 
     @property
@@ -35,7 +59,13 @@ class SGLangServer:
         return f"{self.base_url}/health"
 
     def start(self) -> None:
-        """Start the SGLang server and block until healthy."""
+        """Start the SGLang server and block until healthy.
+
+        SGLang is pinned to *sglang_gpu_id* via a CUDA_VISIBLE_DEVICES
+        **shim**: the child env restricts visibility to that single physical
+        GPU.  This is the recommended fallback from 2XGPU_pod_plan.md §7.2
+        for servers that don't support a ``--device`` flag.
+        """
         if self._proc is not None:
             LOG.warning("SGLang process already exists (pid %s); stopping first", self._proc.pid)
             self.stop()
@@ -49,11 +79,16 @@ class SGLangServer:
         if self._cfg.sglang_extra_args:
             cmd.extend(shlex.split(self._cfg.sglang_extra_args))
 
-        LOG.info("Starting SGLang: %s", " ".join(cmd))
+        # Shim: SGLang has no --device flag, so restrict visibility to the
+        # single physical GPU identified by _sglang_gpu_id.
+        env = {**os.environ, "CUDA_VISIBLE_DEVICES": self._sglang_gpu_id}
+        LOG.info("Starting SGLang (GPU %s, shim CVD=%s): %s",
+                 self._sglang_gpu_id, self._sglang_gpu_id, " ".join(cmd))
         self._proc = subprocess.Popen(
             cmd,
+            env=env,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
         )
         LOG.info("SGLang started (pid %s); waiting for health...", self._proc.pid)
         self._wait_healthy()

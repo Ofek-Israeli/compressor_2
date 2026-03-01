@@ -90,4 +90,12 @@ clean:
 	rm -rf outputs/evolution/__pycache__
 	rm -f outputs/evolution/_eval_deltas.json
 	rm -f outputs/evolution/_eval_processor.py
+	rm -f outputs/evolution/_eval_deltas_prefetch_*.json
+	rm -f outputs/evolution/_eval_processor_prefetch_*.py
+	rm -f outputs/evolution/zero_order_fitness.png
+	rm -f outputs/evolution/zero_order_state.json
+	rm -f outputs/evolution/zero_order_history.jsonl
+	rm -f outputs/evolution/evaluation_indices.json
+	rm -f outputs/evolution/final_eval.json
+	rm -f outputs/evolution/hybrid_phase_switch.json
 	@echo "Evolution run outputs removed; config and directory preserved."

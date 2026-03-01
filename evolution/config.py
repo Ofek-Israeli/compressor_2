@@ -59,5 +59,55 @@ class EvolutionConfig:
     tournament_size: int = -1
     truncation_top_k: int = -1
 
+    # --- Optimization method selector ---
+    optimization_method: str = "deap"
+
+    # --- Zero-order: evaluation budget and failure ---
+    zero_order_max_evals: int = 100
+    eval_minibatch_size: int = 5
+    eval_seed: int = 42
+    eval_timeout_s: int = 600
+    eval_max_retries: int = 1
+    eval_failure_fitness: float = -1e9
+
+    # --- Zero-order: bounds ---
+    deltas_bound_low: float = -2.0
+    deltas_bound_high: float = 2.0
+    optimizer_seed: int = 0
+
+    # --- Zero-order: determinism / LLM ---
+    eval_deterministic: bool = True
+    inference_seed: int = 0
+    llm_max_tokens: int = 2048
+
+    # --- Zero-order: cache ---
+    enable_cache: bool = True
+    cache_round_decimals: int = 6
+
+    # --- Zero-order: final full-pool eval ---
+    run_final_full_pool_eval: bool = True
+
+    # --- Grid search ---
+    grid_low: float = -2.0
+    grid_high: float = 2.0
+    grid_step: float = 0.1
+    grid_max_combos: int = 20000
+    grid_allow_truncation: bool = False
+    grid_batch_size: int = 64
+
+    # --- Method-specific ---
+    tr_dfo_method: str = "bobyqa"
+    skopt_n_random_starts: int = 10
+    optuna_n_trials: int = 0
+    zo_step_size: float = 0.01
+    zo_perturb_scale: float = 0.01
+    zo_num_directions: int = 1
+    zo_t: float = 1.0
+
+    # --- Hybrid ---
+    hybrid_global_method: str = "differential_evolution"
+    hybrid_global_evals: int = 0
+    hybrid_local_evals: int = 0
+
     # --- Derived (set by loader/driver) ---
     expected_cluster_ids: List[str] = field(default_factory=list)

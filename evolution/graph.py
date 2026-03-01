@@ -1,14 +1,91 @@
 """
 Matplotlib graph: composite score, correctness ratio, and mean length vs. iteration.
+Zero-order: fitness vs evaluation index (updated during run).
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 LOG = logging.getLogger(__name__)
+
+ZERO_ORDER_FITNESS_FILENAME = "zero_order_fitness.png"
+
+
+def update_zero_order_fitness_graph(
+    entries: List[Tuple[int, Optional[float], Optional[float]]],
+    output_dir: str,
+    method_name: str,
+) -> None:
+    """Plot fitness vs evaluation index and running best-so-far for zero-order methods.
+
+    entries: list of (eval_id, f, best_f) per evaluation (f may be None on failure).
+    output_dir: evolution output directory.
+    method_name: e.g. 'differential_evolution' for title.
+    Saves output_dir / zero_order_fitness.png. Optional: vertical line for hybrid phase 2.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        LOG.warning("matplotlib not available; skipping zero_order_fitness.png")
+        return
+
+    if not entries:
+        return
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    eval_ids = [e[0] for e in entries]
+    fs = [e[1] for e in entries]
+    best_fs = [e[2] for e in entries]
+
+    # Raw fitness: only successful evals
+    eval_ids_ok = [e[0] for e in entries if e[1] is not None]
+    fs_ok = [e[1] for e in entries if e[1] is not None]
+
+    # Running best-so-far: use entry's best_f, or carry forward previous
+    best_so_far = None
+    best_line = []
+    for b in best_fs:
+        if b is not None:
+            best_so_far = b
+        best_line.append(best_so_far)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    if eval_ids_ok and fs_ok:
+        ax.scatter(eval_ids_ok, fs_ok, alpha=0.5, s=12, color="C0", label="Fitness")
+    if best_so_far is not None:
+        eval_ids_best = [eval_ids[i] for i in range(len(eval_ids)) if best_line[i] is not None]
+        best_vals = [best_line[i] for i in range(len(eval_ids)) if best_line[i] is not None]
+        ax.plot(eval_ids_best, best_vals, "-", linewidth=2, color="C2", label="Best so far")
+
+    # Optional: hybrid phase switch vertical line
+    phase_switch_path = out / "hybrid_phase_switch.json"
+    if method_name == "hybrid" and phase_switch_path.exists():
+        try:
+            data = json.loads(phase_switch_path.read_text())
+            pid = data.get("eval_id")
+            if pid is not None and isinstance(pid, (int, float)):
+                ax.axvline(x=int(pid), color="C3", linestyle="--", alpha=0.8, label="Phase 2 (TR-DFO)")
+        except Exception:
+            pass
+
+    ax.set_xlabel("Evaluation index")
+    ax.set_ylabel("Fitness")
+    ax.set_title(f"{method_name.replace('_', ' ').title()}: Fitness vs evaluation")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    path = out / ZERO_ORDER_FITNESS_FILENAME
+    fig.savefig(str(path), dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    LOG.info("Zero-order graph updated: %s", path)
 
 
 def update_graph(

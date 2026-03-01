@@ -106,6 +106,7 @@ def generate_processor(
     embeddings_path: str | None = None,
     pca_random_state: int | None = None,
     batch_size: int = 512,
+    device: str | None = None,
 ) -> None:
     """Pre-compute token-to-delta mapping and write a standalone .py processor.
 
@@ -160,7 +161,7 @@ def generate_processor(
     all_ids = sorted(vocab.values())
     all_strings = [tokenizer.decode([tid], skip_special_tokens=False) for tid in all_ids]
     logger.info("Embedding %s vocab tokens (batch_size=%s) …", len(all_strings), batch_size)
-    X_vocab = embed_tokens(all_strings, model_name=embedding_model, batch_size=batch_size)
+    X_vocab = embed_tokens(all_strings, model_name=embedding_model, batch_size=batch_size, device=device)
 
     # ---- PCA + KMeans ----
     Z_vocab = pca.transform(X_vocab)

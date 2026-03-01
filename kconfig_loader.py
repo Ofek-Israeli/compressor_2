@@ -119,6 +119,96 @@ def _safe_float(v: Dict[str, object], key: str, default: float) -> float:
     return float(raw)
 
 
+def _safe_bool(v: Dict[str, object], key: str, default: bool) -> bool:
+    raw = v.get(key, default)
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        return raw.strip().lower() in ("y", "yes", "true", "1")
+    return bool(raw)
+
+
+_VALID_METHODS = frozenset({
+    "deap", "grid_search", "random_search", "spsa", "random_direction_2pt",
+    "differential_evolution", "cmaes", "optuna_tpe", "smac", "tr_dfo",
+    "skopt", "hybrid",
+})
+
+_OPT_METHOD_MAP = {
+    "OPT_METHOD_DEAP": "deap",
+    "OPT_METHOD_GRID_SEARCH": "grid_search",
+    "OPT_METHOD_RANDOM_SEARCH": "random_search",
+    "OPT_METHOD_SPSA": "spsa",
+    "OPT_METHOD_RANDOM_DIRECTION_2PT": "random_direction_2pt",
+    "OPT_METHOD_DIFFERENTIAL_EVOLUTION": "differential_evolution",
+    "OPT_METHOD_CMAES": "cmaes",
+    "OPT_METHOD_OPTUNA_TPE": "optuna_tpe",
+    "OPT_METHOD_SMAC": "smac",
+    "OPT_METHOD_TR_DFO": "tr_dfo",
+    "OPT_METHOD_SKOPT": "skopt",
+    "OPT_METHOD_HYBRID": "hybrid",
+}
+
+
+def _detect_method(v: Dict[str, object]) -> str:
+    """Detect optimization method from OPT_METHOD_* bools (new Kconfig choice)
+    with fallback to legacy OPTIMIZATION_METHOD string."""
+    for key, method in _OPT_METHOD_MAP.items():
+        if v.get(key) is True:
+            return method
+    return str(v.get("OPTIMIZATION_METHOD", "deap")).strip()
+
+
+def _validate_zero_order_options(cfg: EvolutionConfig) -> None:
+    """Validate zero-order-specific options (called when method != deap)."""
+    errors: List[str] = []
+
+    if cfg.optimization_method not in _VALID_METHODS:
+        errors.append(
+            f"CONFIG_OPTIMIZATION_METHOD must be one of {sorted(_VALID_METHODS)}, "
+            f"got {cfg.optimization_method!r}"
+        )
+
+    if cfg.zero_order_max_evals < 1:
+        errors.append("CONFIG_ZERO_ORDER_MAX_EVALS must be >= 1")
+    if cfg.eval_minibatch_size < 1:
+        errors.append("CONFIG_EVAL_MINIBATCH_SIZE must be >= 1")
+    if cfg.deltas_bound_low >= cfg.deltas_bound_high:
+        errors.append("CONFIG_DELTAS_BOUND_LOW must be < CONFIG_DELTAS_BOUND_HIGH")
+    if cfg.llm_max_tokens < 1:
+        errors.append("CONFIG_LLM_MAX_TOKENS must be >= 1")
+    if cfg.lambda_shortness < 0:
+        errors.append("CONFIG_LAMBDA_SHORTNESS is required for zero-order (fitness weights)")
+    if cfg.lambda_correctness < 0:
+        errors.append("CONFIG_LAMBDA_CORRECTNESS is required for zero-order (fitness weights)")
+
+    if cfg.optimization_method in ("spsa", "random_direction_2pt"):
+        if cfg.zero_order_max_evals < 2:
+            errors.append(
+                f"{cfg.optimization_method} requires ZERO_ORDER_MAX_EVALS >= 2 "
+                f"(2 evals per step)"
+            )
+
+    if cfg.optimization_method in ("skopt", "grid_search"):
+        if not cfg.eval_deterministic:
+            errors.append(
+                f"{cfg.optimization_method} requires CONFIG_EVAL_DETERMINISTIC=y"
+            )
+
+    if cfg.optimization_method == "grid_search":
+        if cfg.grid_step <= 0:
+            errors.append("CONFIG_GRID_STEP must be > 0")
+        if cfg.grid_low >= cfg.grid_high:
+            errors.append("CONFIG_GRID_LOW must be < CONFIG_GRID_HIGH")
+        if cfg.grid_batch_size < 1:
+            errors.append("CONFIG_GRID_BATCH_SIZE must be >= 1")
+
+    if errors:
+        raise ValueError(
+            "Zero-order config validation failed:\n  " + "\n  ".join(errors)
+        )
+
+
 def load_config(config_path: str, validate_ga: bool = True) -> EvolutionConfig:
     """Load a .config file and return an EvolutionConfig.
 
@@ -126,14 +216,18 @@ def load_config(config_path: str, validate_ga: bool = True) -> EvolutionConfig:
     the directory containing the config file when they are relative. This
     allows the same .config to work regardless of current working directory.
 
-    If validate_ga is False, GA options are not validated (for use by
-    generate-evolution-processors when only path/embedding options are needed).
+    When OPTIMIZATION_METHOD != "deap", GA options are not validated even
+    if validate_ga=True; zero-order options are validated instead.
+    When validate_ga is False and method is deap, GA options are also
+    skipped (for generate-evolution-processors).
     """
     p = Path(config_path).resolve()
     if not p.exists():
         raise FileNotFoundError(f"Config not found: {config_path}")
     config_dir = p.parent
     v = _parse_config_file(str(p))
+
+    method = _detect_method(v)
 
     cfg = EvolutionConfig(
         financebench_jsonl=_resolve_path(config_dir, str(v.get("FINANCEBENCH_JSONL", ""))),
@@ -172,9 +266,49 @@ def load_config(config_path: str, validate_ga: bool = True) -> EvolutionConfig:
         selection=str(v.get("SELECTION", "")),
         tournament_size=int(v.get("TOURNAMENT_SIZE", -1)),
         truncation_top_k=int(v.get("TRUNCATION_TOP_K", -1)),
+        # Optimization method selector
+        optimization_method=method,
+        # Zero-order options
+        zero_order_max_evals=int(v.get("ZERO_ORDER_MAX_EVALS", 100)),
+        eval_minibatch_size=int(v.get("EVAL_MINIBATCH_SIZE", 5)),
+        eval_seed=int(v.get("EVAL_SEED", 42)),
+        eval_timeout_s=int(v.get("EVAL_TIMEOUT_S", 600)),
+        eval_max_retries=int(v.get("EVAL_MAX_RETRIES", 1)),
+        eval_failure_fitness=_safe_float(v, "EVAL_FAILURE_FITNESS", -1e9),
+        deltas_bound_low=_safe_float(v, "DELTAS_BOUND_LOW", -2.0),
+        deltas_bound_high=_safe_float(v, "DELTAS_BOUND_HIGH", 2.0),
+        optimizer_seed=int(v.get("OPTIMIZER_SEED", 0)),
+        eval_deterministic=_safe_bool(v, "EVAL_DETERMINISTIC", True),
+        inference_seed=int(v.get("INFERENCE_SEED", 0)),
+        llm_max_tokens=int(v.get("LLM_MAX_TOKENS", 2048)),
+        enable_cache=_safe_bool(v, "ENABLE_CACHE", True),
+        cache_round_decimals=int(v.get("CACHE_ROUND_DECIMALS", 6)),
+        run_final_full_pool_eval=_safe_bool(v, "RUN_FINAL_FULL_POOL_EVAL", True),
+        # Grid search
+        grid_low=_safe_float(v, "GRID_LOW", -2.0),
+        grid_high=_safe_float(v, "GRID_HIGH", 2.0),
+        grid_step=_safe_float(v, "GRID_STEP", 0.1),
+        grid_max_combos=int(v.get("GRID_MAX_COMBOS", 20000)),
+        grid_allow_truncation=_safe_bool(v, "GRID_ALLOW_TRUNCATION", False),
+        grid_batch_size=int(v.get("GRID_BATCH_SIZE", 64)),
+        # Method-specific
+        tr_dfo_method=str(v.get("TR_DFO_METHOD", "bobyqa")),
+        skopt_n_random_starts=int(v.get("SKOPT_N_RANDOM_STARTS", 10)),
+        optuna_n_trials=int(v.get("OPTUNA_N_TRIALS", 0)),
+        zo_step_size=_safe_float(v, "ZO_STEP_SIZE", 0.01),
+        zo_perturb_scale=_safe_float(v, "ZO_PERTURB_SCALE", 0.01),
+        zo_num_directions=int(v.get("ZO_NUM_DIRECTIONS", 1)),
+        zo_t=_safe_float(v, "ZO_T", 1.0),
+        # Hybrid
+        hybrid_global_method=str(v.get("HYBRID_GLOBAL_METHOD", "differential_evolution")),
+        hybrid_global_evals=int(v.get("HYBRID_GLOBAL_EVALS", 0)),
+        hybrid_local_evals=int(v.get("HYBRID_LOCAL_EVALS", 0)),
     )
 
-    if validate_ga:
-        _validate_ga_options(cfg)
+    if method == "deap":
+        if validate_ga:
+            _validate_ga_options(cfg)
+    else:
+        _validate_zero_order_options(cfg)
 
     return cfg

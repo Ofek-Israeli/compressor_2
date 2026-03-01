@@ -10,7 +10,6 @@ See docs/genetic_evolution_plan.md for the full specification.
 from __future__ import annotations
 
 import copy
-import json
 import logging
 import os
 import random
@@ -18,8 +17,8 @@ import re
 import shutil
 import signal
 import subprocess
-import sys
-import tempfile
+import time
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -27,62 +26,27 @@ from deap import base, creator, tools
 
 from .config import EvolutionConfig
 from .ga_reflector import call_merge_reflector, call_mutation_reflector
+from .gpu_utils import validate_2_gpus as _validate_2_gpus
+from .gpu_utils import verify_gpu_pinning as _verify_gpu_pinning
+from .objective import (
+    deltas_dict_to_list as _deltas_dict_to_list,
+    deltas_list_to_dict as _deltas_list_to_dict,
+    evaluate_x as _evaluate_x_shared,
+    generate_processor as _generate_processor,
+    load_json as _load_json,
+    save_json as _save_json,
+)
 from .sglang_lifecycle import SGLangServer
 
 LOG = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Helpers: JSON / file I/O
-# ---------------------------------------------------------------------------
-
-def _load_json(path: str) -> Any:
-    with open(path, "r") as f:
-        return json.load(f)
-
-
-def _save_json(obj: Any, path: str) -> None:
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(obj, f, indent=2)
-        f.write("\n")
-
-
-# ---------------------------------------------------------------------------
-# Delta list ↔ dict conversion (canonical order)
-# ---------------------------------------------------------------------------
-
-def _deltas_dict_to_list(d: Dict[str, float], cluster_ids: List[str]) -> List[float]:
-    return [float(d[cid]) for cid in cluster_ids]
-
-
-def _deltas_list_to_dict(lst: List[float], cluster_ids: List[str]) -> Dict[str, float]:
-    return {cid: lst[i] for i, cid in enumerate(cluster_ids)}
-
-
-# ---------------------------------------------------------------------------
-# Processor generation and training-set evaluation
-# ---------------------------------------------------------------------------
-
-def _generate_processor(cfg: EvolutionConfig, deltas_path: str, output_path: str) -> None:
-    cmd = [
-        sys.executable, "-m", "compressor_2", "generate-processor",
-        cfg.kmeans_path, deltas_path,
-        "-o", output_path,
-        "--tokenizer", cfg.sglang_model_path,
-        "--embedding-model", cfg.embedding_model,
-        "--embeddings", cfg.embeddings_path,
-        "-b", str(cfg.gen_batch_size),
-    ]
-    LOG.info("Running generate-processor …")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        LOG.error("generate-processor stderr:\n%s", result.stderr)
-        raise RuntimeError(f"generate-processor failed (exit {result.returncode})")
-
-
 def generate_evolution_processors(cfg: EvolutionConfig, out_dir: Path) -> None:
-    """Generate processor_*.py from all deltas_*.json in out_dir. Run after evolution when GPU is free."""
+    """Generate processor_*.py from all deltas_*.json in out_dir.
+
+    Requires a 2-GPU pod (intentional — see docs/2XGPU_pod_plan.md §7.1).
+    """
+    _validate_2_gpus()
     out_dir = Path(out_dir)
     if not out_dir.is_dir():
         raise FileNotFoundError(f"Output directory not found: {out_dir}")
@@ -91,7 +55,6 @@ def generate_evolution_processors(cfg: EvolutionConfig, out_dir: Path) -> None:
         LOG.warning("No deltas_*.json found in %s", out_dir)
         return
     for deltas_path in deltas_files:
-        # deltas_best.json -> processor_best.py; deltas_gen_000.json -> processor_gen_000.py
         stem = deltas_path.stem
         if not stem.startswith("deltas_"):
             continue
@@ -102,73 +65,8 @@ def generate_evolution_processors(cfg: EvolutionConfig, out_dir: Path) -> None:
     LOG.info("Generated %d processor(s) in %s", len(deltas_files), out_dir)
 
 
-def _build_runner_config(
-    base_config_path: str,
-    indices: List[int],
-    cfg: EvolutionConfig,
-) -> str:
-    """Create a temp YAML runner config for the given example indices."""
-    import yaml
-
-    with open(base_config_path, "r") as f:
-        runner_cfg = yaml.safe_load(f)
-    runner_cfg["example_indices"] = indices
-    runner_cfg["concurrency"] = len(indices)
-    runner_cfg["model_id"] = cfg.sglang_model_path
-    if "sglang" not in runner_cfg or not isinstance(runner_cfg.get("sglang"), dict):
-        runner_cfg["sglang"] = {}
-    runner_cfg["sglang"]["base_url"] = f"http://localhost:{cfg.sglang_port}"
-    runner_cfg["sglang"]["timeout_s"] = cfg.runner_timeout_s
-
-    tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, prefix="ga_runner_")
-    yaml.dump(runner_cfg, tmp, default_flow_style=False)
-    tmp.close()
-    return tmp.name
-
-
-def _run_training_set(
-    runner_config_path: str,
-    financebench_jsonl: str,
-    processor_path: str,
-) -> List[Dict[str, Any]]:
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-        tmp_output = tmp.name
-    cmd = [
-        sys.executable, "-m", "financebench_runner",
-        "--config", runner_config_path,
-        "--input", financebench_jsonl,
-        "--output", tmp_output,
-        "--logit-processor", processor_path,
-    ]
-    LOG.info("Running financebench_runner …")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        LOG.error("financebench_runner stderr:\n%s", result.stderr)
-        raise RuntimeError(f"financebench_runner failed (exit {result.returncode})")
-    with open(tmp_output, "r") as f:
-        results = json.load(f)
-    os.unlink(tmp_output)
-    return results
-
-
-def _run_correctness(results: List[Dict[str, Any]], cfg: EvolutionConfig) -> None:
-    from .correctness_openai import evaluate_one
-
-    for r in results:
-        ev = evaluate_one(
-            predicted=r.get("llm_answer", ""),
-            ground_truth=[r.get("ground_truth_answer", "")],
-            question=r.get("question", ""),
-            model=cfg.correctness_model,
-            tolerance=cfg.correctness_tolerance,
-            api_key_env=cfg.openai_api_key_env,
-        )
-        r["is_correct"] = ev.is_correct
-        r["correctness_reasoning"] = ev.reasoning
-
-
 # ---------------------------------------------------------------------------
-# Full fitness evaluation for one individual
+# Full fitness evaluation for one individual (thin wrapper around shared objective)
 # ---------------------------------------------------------------------------
 
 def _evaluate_individual(
@@ -179,61 +77,16 @@ def _evaluate_individual(
     tokenizer: Any,
     server_holder: Dict[str, Any],
     out_dir: Path,
+    *,
+    sglang_gpu_id: str,
+    pre_generated_processor_path: Optional[str] = None,
 ) -> Tuple[float, List[Dict[str, Any]]]:
-    """Generate processor → SGLang → training set → correctness → fitness.
-
-    Returns (fitness_scalar, training_results).
-    """
-    deltas_dict = _deltas_list_to_dict(list(ind), cluster_ids)
-
-    deltas_path = str(out_dir / "_eval_deltas.json")
-    _save_json(deltas_dict, deltas_path)
-
-    # Stop SGLang to free GPU for processor generation
-    srv: Optional[SGLangServer] = server_holder.get("server")
-    if srv is not None:
-        srv.stop()
-        server_holder["server"] = None
-
-    processor_path = str(out_dir / "_eval_processor.py")
-    _generate_processor(cfg, deltas_path, processor_path)
-
-    srv = SGLangServer(cfg, processor_path)
-    srv.start()
-    server_holder["server"] = srv
-
-    tmp_runner_cfg = _build_runner_config(cfg.runner_config_path, training_indices, cfg)
-    try:
-        results = _run_training_set(tmp_runner_cfg, cfg.financebench_jsonl, processor_path)
-    finally:
-        os.unlink(tmp_runner_cfg)
-
-    if not results:
-        LOG.warning("No results from training set evaluation")
-        return 0.0, []
-
-    _run_correctness(results, cfg)
-
-    total_tok_len = 0
-    num_correct = 0
-    for r in results:
-        answer = r.get("llm_answer", "")
-        tok_len = len(tokenizer.encode(answer, add_special_tokens=False))
-        r["tok_len"] = tok_len
-        total_tok_len += tok_len
-        if r.get("is_correct", False):
-            num_correct += 1
-
-    mean_tok_len = total_tok_len / len(results)
-    correctness_ratio = num_correct / len(results)
-    shortness_score = 1.0 / (1.0 + mean_tok_len / cfg.shortness_scale)
-    fitness = cfg.lambda_shortness * shortness_score + cfg.lambda_correctness * correctness_ratio
-
-    LOG.info(
-        "  eval: mean_tok=%.0f  correct=%d/%d  shortness=%.3f  fitness=%.4f",
-        mean_tok_len, num_correct, len(results), shortness_score, fitness,
+    """Thin wrapper: convert DEAP individual to list and call shared evaluate_x."""
+    return _evaluate_x_shared(
+        list(ind), cluster_ids, training_indices, cfg,
+        tokenizer, server_holder, out_dir, sglang_gpu_id,
+        pre_generated_processor_path=pre_generated_processor_path,
     )
-    return fitness, results
 
 
 # ---------------------------------------------------------------------------
@@ -515,10 +368,15 @@ def _compile_tree_png(tree: EvolutionTree, out_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def run_ga_evolution(cfg: EvolutionConfig) -> None:
-    """DEAP-based genetic evolution of steering deltas (the only evolution loop)."""
-
+    """DEAP-based genetic evolution of steering deltas (the only evolution loop).
+    Requires 2 visible GPUs: embedding on first, SGLang on second; prefetch always on.
+    """
     out_dir = Path(cfg.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # ---- 2-GPU requirement (fail fast) ----
+    sglang_gpu_id = _validate_2_gpus()
+    LOG.info("2-GPU evolution: embedding=cuda:0, SGLang shim GPU=%s", sglang_gpu_id)
 
     # ---- Load data ----
     cluster_descriptions: Dict[str, Any] = _load_json(cfg.cluster_descriptions_path)
@@ -554,6 +412,33 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
 
     # ---- Server state (mutable, shared across evaluations) ----
     server_holder: Dict[str, Any] = {"server": None}
+
+    # ---- Start SGLang ONCE (kept running across all evaluations) ----
+    # The logit processor is sent per-request by the runner client, so
+    # the same server instance works with any processor file.
+    srv = SGLangServer(cfg, sglang_gpu_id=sglang_gpu_id)
+    srv.start()
+    server_holder["server"] = srv
+
+    if srv._proc is not None:
+        import time as _time
+        _time.sleep(2)
+        _verify_gpu_pinning(srv._proc.pid)
+    server_holder["_gpu_verified"] = True
+    LOG.info("SGLang started once; kept running across all evaluations")
+
+    # ---- Prefetch (always on): single in-flight generate-processor for next individual ----
+    prefetch_counter = 0
+    prefetch_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="prefetch")
+    prefetch_future: Optional[Future[Optional[str]]] = None
+
+    def _run_prefetch(deltas_path: str, processor_path: str) -> Optional[str]:
+        try:
+            _generate_processor(cfg, deltas_path, processor_path)
+            return processor_path
+        except Exception:
+            LOG.exception("Prefetch generate-processor failed")
+            return None
 
     # ---- Evolution tree ----
     tree = EvolutionTree()
@@ -635,10 +520,20 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
             ref = list(population[0])
             all_same_genome = all(list(ind) == ref for ind in population)
             if all_same_genome and len(population) > 1:
+                # Consume any queued prefetch (e.g. from end of previous gen)
+                pre_path_clone: Optional[str] = None
+                if prefetch_future is not None:
+                    try:
+                        pre_path_clone = prefetch_future.result(timeout=300)
+                    except Exception:
+                        LOG.exception("Prefetch wait failed")
+                    prefetch_future = None
                 LOG.info("All %d individuals share the same genome; evaluating once.", len(population))
                 fit, results = _evaluate_individual(
                     population[0], cfg, cluster_ids, minibatch_indices,
                     tokenizer, server_holder, out_dir,
+                    sglang_gpu_id=sglang_gpu_id,
+                    pre_generated_processor_path=pre_path_clone,
                 )
                 for i, ind in enumerate(population):
                     ind.fitness.values = (fit,)
@@ -646,10 +541,31 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
                     tree.add_pop_node(gen, i, fit)
             else:
                 for i, ind in enumerate(population):
+                    if interrupted:
+                        break
+                    pre_path: Optional[str] = None
+                    if prefetch_future is not None:
+                        try:
+                            pre_path = prefetch_future.result(timeout=None)
+                        except Exception:
+                            LOG.exception("Prefetch wait failed")
+                        prefetch_future = None
+                    # Submit prefetch for i+1 NOW so it runs in parallel
+                    # with the current individual's eval (training set + correctness).
+                    if i + 1 < len(population):
+                        next_ind = population[i + 1]
+                        c = prefetch_counter
+                        prefetch_counter += 1
+                        deltas_path = str(out_dir / f"_eval_deltas_prefetch_{c}.json")
+                        processor_path = str(out_dir / f"_eval_processor_prefetch_{c}.py")
+                        _save_json(_deltas_list_to_dict(list(next_ind), cluster_ids), deltas_path)
+                        prefetch_future = prefetch_executor.submit(_run_prefetch, deltas_path, processor_path)
                     LOG.info("Evaluating pop[%d] …", i)
                     fit, results = _evaluate_individual(
                         ind, cfg, cluster_ids, minibatch_indices,
                         tokenizer, server_holder, out_dir,
+                        sglang_gpu_id=sglang_gpu_id,
+                        pre_generated_processor_path=pre_path,
                     )
                     ind.fitness.values = (fit,)
                     ind.training_results = results
@@ -711,15 +627,46 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
 
                 offspring.append(child)
 
+            # Pre-queue processor generation for offspring[0] so it overlaps
+            # with the (near-instant) loop setup below.
+            if offspring and prefetch_future is None:
+                c = prefetch_counter
+                prefetch_counter += 1
+                _pf_deltas = str(out_dir / f"_eval_deltas_prefetch_{c}.json")
+                _pf_proc = str(out_dir / f"_eval_processor_prefetch_{c}.py")
+                _save_json(_deltas_list_to_dict(list(offspring[0]), cluster_ids), _pf_deltas)
+                prefetch_future = prefetch_executor.submit(_run_prefetch, _pf_deltas, _pf_proc)
+
             # ---- (4) For each child: evaluate, maybe mutate + re-evaluate ----
             for j, child in enumerate(offspring):
                 if interrupted:
                     break
 
+                pre_path = None
+                if prefetch_future is not None:
+                    try:
+                        pre_path = prefetch_future.result(timeout=None)
+                    except Exception:
+                        LOG.exception("Prefetch wait failed")
+                    prefetch_future = None
+
+                # Submit prefetch for j+1 NOW so it runs in parallel
+                # with the current offspring's eval (training set + correctness).
+                if j + 1 < len(offspring):
+                    next_child = offspring[j + 1]
+                    c = prefetch_counter
+                    prefetch_counter += 1
+                    deltas_path = str(out_dir / f"_eval_deltas_prefetch_{c}.json")
+                    processor_path = str(out_dir / f"_eval_processor_prefetch_{c}.py")
+                    _save_json(_deltas_list_to_dict(list(next_child), cluster_ids), deltas_path)
+                    prefetch_future = prefetch_executor.submit(_run_prefetch, deltas_path, processor_path)
+
                 LOG.info("Evaluating offspring[%d] …", j)
                 fit, results = _evaluate_individual(
                     child, cfg, cluster_ids, minibatch_indices,
                     tokenizer, server_holder, out_dir,
+                    sglang_gpu_id=sglang_gpu_id,
+                    pre_generated_processor_path=pre_path,
                 )
                 child.fitness.values = (fit,)
                 child.training_results = results
@@ -749,6 +696,8 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
                         fit2, results2 = _evaluate_individual(
                             child, cfg, cluster_ids, minibatch_indices,
                             tokenizer, server_holder, out_dir,
+                            sglang_gpu_id=sglang_gpu_id,
+                            pre_generated_processor_path=None,
                         )
                         child.fitness.values = (fit2,)
                         child.training_results = results2
@@ -761,6 +710,22 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
 
             # ---- (5) Replace: next population = elites + offspring ----
             population = elite_clones + offspring
+
+            # Pre-queue processor generation for pop[0] of the NEXT generation.
+            # Runs in the background during the persist/logging phase below, so
+            # it is ready (or nearly ready) when the next gen's eval loop starts.
+            if gen + 1 < cfg.ngen and population:
+                if prefetch_future is not None:
+                    try:
+                        prefetch_future.result(timeout=300)
+                    except Exception:
+                        pass
+                c = prefetch_counter
+                prefetch_counter += 1
+                _pf_deltas = str(out_dir / f"_eval_deltas_prefetch_{c}.json")
+                _pf_proc = str(out_dir / f"_eval_processor_prefetch_{c}.py")
+                _save_json(_deltas_list_to_dict(list(population[0]), cluster_ids), _pf_deltas)
+                prefetch_future = prefetch_executor.submit(_run_prefetch, _pf_deltas, _pf_proc)
 
             # ---- Logging / persistence ----
             all_fits = [
@@ -804,6 +769,13 @@ def run_ga_evolution(cfg: EvolutionConfig) -> None:
 
     finally:
         signal.signal(signal.SIGINT, original_sigint)
+
+        if prefetch_future is not None:
+            try:
+                prefetch_future.result(timeout=300)
+            except Exception:
+                pass
+        prefetch_executor.shutdown(wait=True)
 
         srv = server_holder.get("server")
         if srv is not None:

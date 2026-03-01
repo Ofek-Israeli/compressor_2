@@ -42,6 +42,9 @@ PYTHONPATH=. python3 -m compressor_2 --help
 | `pca`          | Embeddings (.npy) → reduced (.npy)                       |
 | `kmeans`       | Reduced (.npy) → labels (text) + fitted model (joblib); optional cluster descriptions (JSON) |
 | `pipeline`     | Tokens → labels (runs all three)                          |
+| `evolve`       | Run evolution (DEAP GA or zero-order) — see [Evolution](#evolution) |
+| `generate-processor` | Build logit processor from deltas (for a 2-GPU pod)   |
+| `generate-evolution-processors` | Batch-generate processor_*.py from deltas_*.json (2-GPU pod) |
 
 **Examples:**
 
@@ -73,6 +76,33 @@ PYTHONPATH=. python3 -m compressor_2 pipeline tokens.txt -o labels.txt -d 8 -k 3
 ```
 
 Optional: `-b` / `--batch-size N` (default 128) on `embed` and `embed-files` for better GPU utilization. Optional outputs: `--embeddings-out`, `--reduced-out`, `--pca-out`, `--kmeans-out` (pipeline only). For `kmeans`, the fitted model is written by default to `stem_kmeans.joblib` when `-o` is a file (use `--model-out` to override); use `--text` and `--descriptions-out` to generate cluster descriptions via gpt-4o (requires `OPENAI_API_KEY`; text file must be whitespace-split tokens in same order as pipeline). Use `-` for stdin/stdout where supported (e.g. `embed - -o out.npy` reads tokens from stdin).
+
+## Evolution
+
+Evolution runs **only** on a **2-GPU pod**: embedding/generate-processor on one GPU, SGLang (LLM) on the other, with prefetch to overlap processor generation and query evaluation. See `docs/2XGPU_pod_plan.md` for GPU pinning and `docs/genetic_evolution_plan.md` (GA) and `docs/zero_order_opt_plan.md` (zero-order) for full specs.
+
+**Run evolution (single entry):**
+
+```bash
+PYTHONPATH=. python3 -m compressor_2 evolve --config .config
+```
+
+Configure via Kconfig (e.g. `make menuconfig` then build `.config`). The **Optimization Algorithm** choice selects:
+
+- **`deap`** — DEAP genetic algorithm (default).
+- **Zero-order:** `grid_search`, `random_search`, `spsa`, `random_direction_2pt`, `differential_evolution`, `cmaes`, `optuna_tpe`, `smac`, `tr_dfo`, `skopt` (skopt only when `CONFIG_EVAL_DETERMINISTIC=y`), or `hybrid` (global → TR-DFO).
+
+Eval set is always a **fixed minibatch**; state (e.g. `zero_order_state.json`, `evolution_state.json`) is saved during the run and on Ctrl+C so re-running continues from the same place. Zero-order methods use a shared evaluator and `EvalContext` with prefetch; population/batch methods call `ctx.evaluate_batch(...)` for maximal overlap.
+
+**Output graphs:** DEAP runs write **ga_fitness.png** (fitness vs generation) and **evolution_tree.png** to the evolution output directory, updated after each generation. Zero-order runs write **zero_order_fitness.png** (fitness vs evaluation index, best-so-far line), updated during the run and once at the end.
+
+**Optional:** After `evolve`, generate processor scripts from saved deltas (when GPUs are free):
+
+```bash
+PYTHONPATH=. python3 -m compressor_2 generate-evolution-processors --output-dir outputs/evolution --config .config
+```
+
+**Dependencies:** Evolution needs `deap`; zero-order needs `scipy`. Optional per method: `cma`, `optuna`, `smac`, `ConfigSpace`, `scikit-optimize`, `pdfo`, `pybobyqa` — see `requirements.txt` comments.
 
 ## Usage (Python API)
 

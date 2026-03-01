@@ -178,6 +178,7 @@ def cmd_generate_processor(args: argparse.Namespace) -> None:
         embeddings_path=str(args.embeddings) if args.embeddings else None,
         pca_random_state=args.pca_random_state,
         batch_size=args.batch_size,
+        device=getattr(args, "device", None),
     )
 
 
@@ -190,7 +191,7 @@ def cmd_evolve(args: argparse.Namespace) -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    cfg = load_config(args.config)
+    cfg = load_config(args.config, validate_ga=True)
     run_evolution(cfg)
 
 
@@ -518,6 +519,12 @@ def main() -> None:
         default=512,
         metavar="N",
         help="Batch size for embedding the LLM vocab (default: 512)",
+    )
+    p_gen.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        help="Torch device for the embedding model (e.g. cuda:0). Default: auto-detect.",
     )
     p_gen.set_defaults(func=cmd_generate_processor)
 

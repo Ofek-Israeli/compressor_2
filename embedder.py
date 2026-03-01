@@ -14,6 +14,7 @@ def embed_files(
     file_paths: list[str] | list[Path],
     model_name: str = "all-MiniLM-L6-v2",
     batch_size: int | None = 128,
+    device: str | None = None,
     **kwargs: object,
 ) -> np.ndarray:
     """
@@ -23,6 +24,7 @@ def embed_files(
         file_paths: Paths to text files. Order is preserved in the output (tokens from first file, then second, etc.).
         model_name: HuggingFace model name (e.g. "all-MiniLM-L6-v2"). Cached after first load.
         batch_size: Batch size for encode(); default 128 for better GPU utilization. Overridden by batch_size in kwargs.
+        device: Torch device string (e.g. "cuda:0", "cpu").  ``None`` = auto-detect.
         **kwargs: Passed through to SentenceTransformer.encode() (e.g. show_progress_bar).
 
     Returns:
@@ -31,7 +33,7 @@ def embed_files(
     """
     if not file_paths:
         from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer(model_name)
+        model = SentenceTransformer(model_name, device=device)
         embed_dim = model.get_sentence_embedding_dimension()
         return np.zeros((0, embed_dim), dtype=np.float32)
 
@@ -43,17 +45,18 @@ def embed_files(
 
     if not texts:
         from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer(model_name)
+        model = SentenceTransformer(model_name, device=device)
         embed_dim = model.get_sentence_embedding_dimension()
         return np.zeros((0, embed_dim), dtype=np.float32)
 
-    return embed_tokens(texts, model_name=model_name, batch_size=batch_size, **kwargs)
+    return embed_tokens(texts, model_name=model_name, batch_size=batch_size, device=device, **kwargs)
 
 
 def embed_tokens(
     tokens: list[str],
     model_name: str = "all-MiniLM-L6-v2",
     batch_size: int | None = None,
+    device: str | None = None,
     **kwargs: object,
 ) -> np.ndarray:
     """
@@ -63,6 +66,7 @@ def embed_tokens(
         tokens: List of token strings to embed. Order is preserved in the output.
         model_name: HuggingFace model name (e.g. "all-MiniLM-L6-v2"). Cached after first load.
         batch_size: Batch size for encode(); larger values can improve GPU utilization (e.g. 128 on Apple Silicon).
+        device: Torch device string (e.g. "cuda:0", "cpu").  ``None`` = auto-detect.
         **kwargs: Passed through to SentenceTransformer.encode() (e.g. show_progress_bar).
 
     Returns:
@@ -71,7 +75,7 @@ def embed_tokens(
     """
     if not tokens:
         from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer(model_name)
+        model = SentenceTransformer(model_name, device=device)
         embed_dim = model.get_sentence_embedding_dimension()
         return np.zeros((0, embed_dim), dtype=np.float32)
 
@@ -80,7 +84,6 @@ def embed_tokens(
     encode_kwargs = dict(kwargs)
     if batch_size is not None:
         encode_kwargs["batch_size"] = batch_size
-    model = SentenceTransformer(model_name)
-    # Each token is embedded as a single "sentence" to get token-level embeddings
+    model = SentenceTransformer(model_name, device=device)
     embeddings = model.encode(tokens, **encode_kwargs)
     return np.asarray(embeddings, dtype=np.float32)

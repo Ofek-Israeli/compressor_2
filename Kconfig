@@ -7,9 +7,9 @@
 
 mainmenu "compressor_2 Evolution Configuration"
 
-#
+# ─────────────────────────────────────────────────────
 # Data Paths
-#
+# ─────────────────────────────────────────────────────
 menu "Data Paths"
 
 config FINANCEBENCH_JSONL
@@ -55,21 +55,108 @@ config OUTPUT_DIR
 	string "Evolution output directory"
 	default "outputs/evolution"
 	help
-	  Directory for evolution outputs: deltas, processors, graphs, logs.
+	  Directory for evolution outputs: deltas, processors, state JSON,
+	  ga_fitness.png / evolution_tree.png (DEAP) or zero_order_fitness.png
+	  (zero-order), and logs.
 
 endmenu
 
-#
-# Evolution Parameters
-#
-menu "Evolution Parameters"
-
-config MINIBATCH_SIZE
-	int "Minibatch size (examples per iteration)"
-	default 5
-	range 1 50
+# ─────────────────────────────────────────────────────
+# Optimization Algorithm (top-level choice)
+# ─────────────────────────────────────────────────────
+choice
+	prompt "Optimization Algorithm"
+	default OPT_METHOD_DEAP
 	help
-	  Number of FinanceBench examples to run per evolution iteration.
+	  Select which optimization algorithm to run.
+	  DEAP uses a genetic algorithm; all other choices
+	  use zero-order optimization (see docs/zero_order_opt_plan.md).
+
+config OPT_METHOD_DEAP
+	bool "DEAP Genetic Algorithm"
+	help
+	  Evolutionary strategy using DEAP: crossover, mutation via
+	  reflector, elitism, tournament/truncation selection.
+
+config OPT_METHOD_GRID_SEARCH
+	bool "Grid Search"
+	help
+	  Exhaustive grid over delta dimensions. Requires deterministic
+	  evaluation (EVAL_DETERMINISTIC=y).
+
+config OPT_METHOD_RANDOM_SEARCH
+	bool "Random Search"
+	help
+	  Uniform random sampling within delta bounds.
+
+config OPT_METHOD_SPSA
+	bool "SPSA (Simultaneous Perturbation)"
+	help
+	  Simultaneous perturbation stochastic approximation.
+	  Uses 2 evaluations per step (±perturbation).
+
+config OPT_METHOD_RANDOM_DIRECTION_2PT
+	bool "Random Direction (2-point)"
+	help
+	  Two-point random direction gradient estimate.
+	  Uses 2 evaluations per step (±perturbation).
+
+config OPT_METHOD_DIFFERENTIAL_EVOLUTION
+	bool "Differential Evolution (SciPy)"
+	help
+	  SciPy's differential_evolution global optimizer.
+
+config OPT_METHOD_CMAES
+	bool "CMA-ES"
+	help
+	  Covariance Matrix Adaptation Evolution Strategy (pycma).
+
+config OPT_METHOD_OPTUNA_TPE
+	bool "Optuna TPE"
+	help
+	  Tree-structured Parzen Estimator via Optuna.
+
+config OPT_METHOD_SMAC
+	bool "SMAC"
+	help
+	  Sequential Model-based Algorithm Configuration.
+
+config OPT_METHOD_TR_DFO
+	bool "Trust-Region DFO (BOBYQA / NEWUOA)"
+	help
+	  Trust-region derivative-free optimization via pdfo/pybobyqa.
+
+config OPT_METHOD_SKOPT
+	bool "Bayesian Optimization (skopt)"
+	help
+	  Gaussian-process surrogate via scikit-optimize.
+	  Requires deterministic evaluation (EVAL_DETERMINISTIC=y).
+
+config OPT_METHOD_HYBRID
+	bool "Hybrid (global → TR-DFO)"
+	help
+	  Two-phase: global optimizer first, then local TR-DFO refinement.
+
+endchoice
+
+# ─────────────────────────────────────────────────────
+# Fitness & Scoring (shared by all methods)
+# ─────────────────────────────────────────────────────
+menu "Fitness & Scoring"
+
+config LAMBDA_SHORTNESS
+	string "Fitness weight: shortness (float in [0,1])"
+	default ""
+	help
+	  Weight for the shortness component of fitness.
+	  Required — loader raises at startup if empty.
+
+config LAMBDA_CORRECTNESS
+	string "Fitness weight: correctness (float in [0,1])"
+	default ""
+	help
+	  Weight for the correctness component of fitness.
+	  Required — loader raises at startup if empty.
 
 config SHORTNESS_SCALE
 	int "Shortness score scale (tokens)"
@@ -79,18 +166,11 @@ config SHORTNESS_SCALE
 	  Scale used in shortness_score = 1/(1 + mean_tok_len/scale).
 	  Higher values make the shortness component less sensitive to length.
 
-config MAX_ITERATIONS
-	int "Maximum evolution iterations"
-	default 20
-	range 1 1000
-	help
-	  Maximum number of evolution iterations to run.
-
 endmenu
 
-#
-# Correctness (learning_grammar)
-#
+# ─────────────────────────────────────────────────────
+# Correctness (learning_grammar) — shared by all methods
+# ─────────────────────────────────────────────────────
 menu "Correctness"
 
 config CORRECTNESS_MODEL
@@ -113,9 +193,9 @@ config MINIONS_REPO
 
 endmenu
 
-#
-# SGLang Server
-#
+# ─────────────────────────────────────────────────────
+# SGLang Server — shared by all methods
+# ─────────────────────────────────────────────────────
 menu "SGLang Server"
 
 config SGLANG_MODEL_PATH
@@ -155,9 +235,9 @@ config SGLANG_HEALTH_INTERVAL
 
 endmenu
 
-#
-# FinanceBench Runner
-#
+# ─────────────────────────────────────────────────────
+# FinanceBench Runner — shared by all methods
+# ─────────────────────────────────────────────────────
 menu "FinanceBench Runner"
 
 config RUNNER_CONFIG_PATH
@@ -177,34 +257,9 @@ config RUNNER_TIMEOUT_S
 
 endmenu
 
-#
-# Reflector (GPT-4o)
-#
-menu "Reflector"
-
-config REFLECTOR_MODEL
-	string "Reflector model"
-	default "gpt-4o"
-	help
-	  OpenAI model name for the reflector (e.g. gpt-4o).
-
-config OPENAI_API_KEY_ENV
-	string "OpenAI API key environment variable"
-	default "OPENAI_API_KEY"
-	help
-	  Name of the environment variable holding the OpenAI API key.
-
-config REFLECTOR_TEMPERATURE
-	string "Reflector sampling temperature"
-	default "0.7"
-	help
-	  Sampling temperature for the reflector LM.
-
-endmenu
-
-#
-# Generate Processor
-#
+# ─────────────────────────────────────────────────────
+# Generate Processor — shared by all methods
+# ─────────────────────────────────────────────────────
 menu "Generate Processor"
 
 config EMBEDDING_MODEL
@@ -222,24 +277,26 @@ config GEN_BATCH_SIZE
 
 endmenu
 
-#
-# Genetic Algorithm (DEAP)
-#
+# ═════════════════════════════════════════════════════
+# DEAP-only menus
+# ═════════════════════════════════════════════════════
+
 menu "Genetic Algorithm (DEAP)"
+	depends on OPT_METHOD_DEAP
 
-config LAMBDA_SHORTNESS
-	string "Fitness weight: shortness (float in [0,1])"
-	default ""
+config MINIBATCH_SIZE
+	int "Minibatch size (examples per GA iteration)"
+	default 5
+	range 1 50
 	help
-	  Weight for the shortness component of fitness.
-	  Required — loader raises at startup if empty.
+	  Number of FinanceBench examples to run per GA iteration.
 
-config LAMBDA_CORRECTNESS
-	string "Fitness weight: correctness (float in [0,1])"
-	default ""
+config MAX_ITERATIONS
+	int "Maximum GA iterations"
+	default 20
+	range 1 1000
 	help
-	  Weight for the correctness component of fitness.
-	  Required — loader raises at startup if empty.
+	  Maximum number of GA iterations to run.
 
 config POPULATION_SIZE
 	int "Population size"
@@ -295,5 +352,275 @@ config TRUNCATION_TOP_K
 	help
 	  Number of top individuals forming the parent pool.
 	  Validation: >= 2 (and optionally <= POPULATION_SIZE).
+
+endmenu
+
+menu "Reflector"
+	depends on OPT_METHOD_DEAP
+
+config REFLECTOR_MODEL
+	string "Reflector model"
+	default "gpt-4o"
+	help
+	  OpenAI model name for the reflector (e.g. gpt-4o).
+
+config OPENAI_API_KEY_ENV
+	string "OpenAI API key environment variable"
+	default "OPENAI_API_KEY"
+	help
+	  Name of the environment variable holding the OpenAI API key.
+
+config REFLECTOR_TEMPERATURE
+	string "Reflector sampling temperature"
+	default "0.7"
+	help
+	  Sampling temperature for the reflector LM.
+
+endmenu
+
+# ═════════════════════════════════════════════════════
+# Zero-order: shared evaluation settings
+# ═════════════════════════════════════════════════════
+
+menu "Evaluation Budget & Bounds"
+	depends on !OPT_METHOD_DEAP
+
+config ZERO_ORDER_MAX_EVALS
+	int "Max objective evaluations (budget)"
+	default 100
+	range 1 1000000
+	help
+	  Hard cap on the number of objective evaluations.
+
+config EVAL_MINIBATCH_SIZE
+	int "Eval-set minibatch size"
+	default 5
+	range 1 500
+	help
+	  Size of the fixed minibatch used for all evaluations.
+
+config EVAL_SEED
+	int "Eval-set sampling seed"
+	default 42
+	help
+	  Seed for sampling the fixed minibatch from the pool.
+
+config DELTAS_BOUND_LOW
+	string "Delta bound low (float)"
+	default "-2.0"
+	help
+	  Lower bound for each delta dimension.
+
+config DELTAS_BOUND_HIGH
+	string "Delta bound high (float)"
+	default "2.0"
+	help
+	  Upper bound for each delta dimension.
+
+config EVAL_TIMEOUT_S
+	int "Per-evaluation timeout (seconds)"
+	default 600
+	range 30 7200
+	help
+	  Timeout for a single objective evaluation attempt.
+
+config EVAL_MAX_RETRIES
+	int "Max retries per evaluation"
+	default 1
+	range 0 10
+	help
+	  Number of retry attempts on evaluation failure.
+
+config EVAL_FAILURE_FITNESS
+	string "Fitness on total failure (float)"
+	default "-1000000000"
+	help
+	  Fitness returned when all retry attempts fail.
+
+config OPTIMIZER_SEED
+	int "Optimizer RNG seed"
+	default 0
+	depends on !OPT_METHOD_GRID_SEARCH && !OPT_METHOD_TR_DFO
+	help
+	  Seed for stochastic optimizers (separate from EVAL_SEED).
+	  Not used by grid_search or tr_dfo.
+
+config EVAL_DETERMINISTIC
+	bool "Deterministic evaluation"
+	default y
+	help
+	  When enabled, force temperature=0, top_p=1, fixed seed for
+	  LLM decoding. Required for skopt and grid_search.
+
+config INFERENCE_SEED
+	int "LLM inference seed"
+	default 0
+	depends on EVAL_DETERMINISTIC
+	help
+	  Seed for deterministic LLM decoding.
+
+config LLM_MAX_TOKENS
+	int "Max tokens per LLM reply"
+	default 2048
+	range 1 32768
+	help
+	  Maximum number of tokens the LLM may generate per reply.
+
+config ENABLE_CACHE
+	bool "Enable evaluation cache"
+	default y
+	depends on EVAL_DETERMINISTIC
+	help
+	  Cache evaluation results keyed by rounded x + indices hash.
+	  Only meaningful with deterministic evaluation.
+
+config CACHE_ROUND_DECIMALS
+	int "Cache key rounding decimals"
+	default 6
+	range 1 15
+	depends on ENABLE_CACHE
+	help
+	  Number of decimal places for rounding x in cache keys.
+
+config RUN_FINAL_FULL_POOL_EVAL
+	bool "Run final full-pool evaluation"
+	default y
+	help
+	  After optimization, evaluate best_x on the full pool.
+
+endmenu
+
+# ═════════════════════════════════════════════════════
+# Per-method menus (only visible when that method is selected)
+# ═════════════════════════════════════════════════════
+
+menu "Grid Search Options"
+	depends on OPT_METHOD_GRID_SEARCH
+
+config GRID_LOW
+	string "Grid low bound (float)"
+	default "-2.0"
+	help
+	  Lower bound for the grid search range per dimension.
+
+config GRID_HIGH
+	string "Grid high bound (float)"
+	default "2.0"
+	help
+	  Upper bound for the grid search range per dimension.
+
+config GRID_STEP
+	string "Grid step size (float)"
+	default "0.1"
+	help
+	  Step size for grid discretization.
+
+config GRID_MAX_COMBOS
+	int "Grid max combinations (safety limit)"
+	default 20000
+	range 1 100000000
+	help
+	  Fail fast if total grid combos exceed this limit.
+
+config GRID_ALLOW_TRUNCATION
+	bool "Allow truncation at max_evals"
+	default n
+	help
+	  If enabled, grid search stops at max_evals instead of
+	  requiring total_combos <= max_evals.
+
+config GRID_BATCH_SIZE
+	int "Grid streaming batch size"
+	default 64
+	range 1 10000
+	help
+	  Number of grid points to evaluate per batch (memory/perf).
+
+endmenu
+
+menu "SPSA / Random Direction Options"
+	depends on OPT_METHOD_SPSA || OPT_METHOD_RANDOM_DIRECTION_2PT
+
+config ZO_STEP_SIZE
+	string "Step size / learning rate (a)"
+	default "0.01"
+	help
+	  Step size (learning rate) for SPSA / random_direction_2pt.
+
+config ZO_PERTURB_SCALE
+	string "Perturbation scale (c)"
+	default "0.01"
+	help
+	  Perturbation magnitude for finite-diff gradient estimates.
+
+config ZO_NUM_DIRECTIONS
+	int "Number of directions per step"
+	default 1
+	range 1 100
+	help
+	  Number of random directions per gradient estimate step.
+
+config ZO_T
+	string "Temperature / decay"
+	default "1.0"
+	help
+	  Temperature or schedule parameter.
+
+endmenu
+
+menu "Trust-Region DFO Options"
+	depends on OPT_METHOD_TR_DFO
+
+config TR_DFO_METHOD
+	string "Backend method"
+	default "bobyqa"
+	help
+	  Trust-region DFO method: bobyqa, newuoa, etc.
+
+endmenu
+
+menu "skopt (Bayesian Optimization) Options"
+	depends on OPT_METHOD_SKOPT
+
+config SKOPT_N_RANDOM_STARTS
+	int "Initial random evaluations"
+	default 10
+	range 1 1000
+	help
+	  Number of initial random points before surrogate kicks in.
+
+endmenu
+
+menu "Optuna TPE Options"
+	depends on OPT_METHOD_OPTUNA_TPE
+
+config OPTUNA_N_TRIALS
+	int "Number of trials (0 = use max_evals)"
+	default 0
+	help
+	  Number of Optuna trials. 0 means use ZERO_ORDER_MAX_EVALS.
+
+endmenu
+
+menu "Hybrid Options"
+	depends on OPT_METHOD_HYBRID
+
+config HYBRID_GLOBAL_METHOD
+	string "Global method"
+	default "differential_evolution"
+	help
+	  Global optimizer for hybrid phase 1.
+
+config HYBRID_GLOBAL_EVALS
+	int "Global budget"
+	default 0
+	help
+	  Max evals for the global phase. 0 means half of max_evals.
+
+config HYBRID_LOCAL_EVALS
+	int "Local budget"
+	default 0
+	help
+	  Max evals for the local (TR-DFO) phase. 0 means remaining budget.
 
 endmenu
