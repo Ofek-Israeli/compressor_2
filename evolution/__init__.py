@@ -3,6 +3,8 @@
 
 def run_evolution(cfg):
     """Branch on optimization_method: DEAP GA or zero-order path."""
+    from .openai_key_rotation import init_keys
+    init_keys(cfg.openai_keys_file, cfg.openai_api_key_env)
     method = getattr(cfg, "optimization_method", "deap")
     if method == "deap":
         from .ga_driver import run_ga_evolution

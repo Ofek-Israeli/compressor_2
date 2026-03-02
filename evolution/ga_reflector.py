@@ -109,10 +109,10 @@ def call_mutation_reflector(
     generation: int = 0,
     index: int = 0,
 ) -> Optional[Tuple[Dict[str, float], str]]:
-    """Call the reflector for mutation. Returns (new_deltas_dict, new_scratchpad) or None on failure."""
-    api_key = os.environ.get(cfg.openai_api_key_env)
-    if not api_key:
-        raise RuntimeError(f"Environment variable {cfg.openai_api_key_env} is not set")
+    """Call the reflector for mutation. Returns (new_deltas_dict, new_scratchpad) or None on failure.
+    On OpenAI API error, rotates to the next key and retries; if all keys exhausted, raises.
+    """
+    from .openai_key_rotation import is_initialized, is_openai_api_error, rotate_to_next_key
 
     user_content = MUTATION_USER_TEMPLATE.format(
         cluster_descriptions_json=json.dumps(cluster_descriptions, indent=2),
@@ -128,56 +128,66 @@ def call_mutation_reflector(
     if output_dir is not None:
         log_reflector_call(messages, "mutation", generation, index, output_dir)
 
-    client = OpenAI(api_key=api_key)
     expected_keys = set(current_deltas.keys())
 
-    for attempt in range(2):
-        try:
-            response = client.chat.completions.create(
-                model=cfg.reflector_model,
-                messages=messages,
-                temperature=cfg.reflector_temperature,
-                response_format=MUTATION_RESPONSE_SCHEMA,
-            )
-            raw = response.choices[0].message.content
-            data = json.loads(raw)
-            new_deltas = data.get("deltas")
-            new_scratchpad = data.get("scratchpad", "")
+    while True:
+        api_key = os.environ.get(cfg.openai_api_key_env)
+        if not api_key:
+            raise RuntimeError(f"Environment variable {cfg.openai_api_key_env} is not set")
+        client = OpenAI(api_key=api_key)
+        for attempt in range(2):
+            try:
+                response = client.chat.completions.create(
+                    model=cfg.reflector_model,
+                    messages=messages,
+                    temperature=cfg.reflector_temperature,
+                    response_format=MUTATION_RESPONSE_SCHEMA,
+                )
+                raw = response.choices[0].message.content
+                data = json.loads(raw)
+                new_deltas = data.get("deltas")
+                new_scratchpad = data.get("scratchpad", "")
 
-            if not isinstance(new_deltas, dict):
-                LOG.warning("Mutation attempt %d: deltas not a dict (%r)", attempt + 1, type(new_deltas))
-                continue
+                if not isinstance(new_deltas, dict):
+                    LOG.warning("Mutation attempt %d: deltas not a dict (%r)", attempt + 1, type(new_deltas))
+                    continue
 
-            parsed: Dict[str, float] = {}
-            bad = False
-            for k in expected_keys:
-                v = new_deltas.get(k)
-                if v is None:
-                    LOG.warning("Mutation attempt %d: missing cluster %s", attempt + 1, k)
-                    bad = True
+                parsed: Dict[str, float] = {}
+                bad = False
+                for k in expected_keys:
+                    v = new_deltas.get(k)
+                    if v is None:
+                        LOG.warning("Mutation attempt %d: missing cluster %s", attempt + 1, k)
+                        bad = True
+                        break
+                    if not isinstance(v, (int, float)):
+                        LOG.warning("Mutation attempt %d: cluster %s not numeric (%r)", attempt + 1, k, v)
+                        bad = True
+                        break
+                    parsed[k] = float(v)
+                if bad:
+                    continue
+
+                changed = any(
+                    abs(parsed[k] - current_deltas.get(k, 0.0)) > 1e-9 for k in expected_keys
+                )
+                if not changed:
+                    LOG.warning("Mutation attempt %d: all deltas unchanged", attempt + 1)
+                    continue
+
+                return parsed, str(new_scratchpad)
+
+            except Exception as e:
+                if is_initialized() and is_openai_api_error(e):
+                    if not rotate_to_next_key():
+                        raise RuntimeError(
+                            "All OpenAI keys exhausted (mutation reflector): %s" % e
+                        ) from e
                     break
-                if not isinstance(v, (int, float)):
-                    LOG.warning("Mutation attempt %d: cluster %s not numeric (%r)", attempt + 1, k, v)
-                    bad = True
-                    break
-                parsed[k] = float(v)
-            if bad:
-                continue
-
-            changed = any(
-                abs(parsed[k] - current_deltas.get(k, 0.0)) > 1e-9 for k in expected_keys
-            )
-            if not changed:
-                LOG.warning("Mutation attempt %d: all deltas unchanged", attempt + 1)
-                continue
-
-            return parsed, str(new_scratchpad)
-
-        except Exception:
-            LOG.exception("Mutation reflector call failed (attempt %d)", attempt + 1)
-
-    LOG.warning("Mutation reflector failed after 2 attempts; skipping mutation")
-    return None
+                LOG.exception("Mutation reflector call failed (attempt %d)", attempt + 1)
+        else:
+            LOG.warning("Mutation reflector failed after 2 attempts; skipping mutation")
+            return None
 
 
 # ---------------------------------------------------------------------------
@@ -234,10 +244,10 @@ def call_merge_reflector(
     generation: int = 0,
     index: int = 0,
 ) -> str:
-    """Call the reflector for scratchpad merge. Returns merged scratchpad string."""
-    api_key = os.environ.get(cfg.openai_api_key_env)
-    if not api_key:
-        raise RuntimeError(f"Environment variable {cfg.openai_api_key_env} is not set")
+    """Call the reflector for scratchpad merge. Returns merged scratchpad string.
+    On OpenAI API error, rotates to the next key and retries; if all keys exhausted, raises.
+    """
+    from .openai_key_rotation import is_initialized, is_openai_api_error, rotate_to_next_key
 
     user_content = MERGE_USER_TEMPLATE.format(
         fitness_a=f"{fitness_a:.4f}",
@@ -253,27 +263,36 @@ def call_merge_reflector(
     if output_dir is not None:
         log_reflector_call(messages, "merge", generation, index, output_dir)
 
-    client = OpenAI(api_key=api_key)
-
-    for attempt in range(2):
-        try:
-            response = client.chat.completions.create(
-                model=cfg.reflector_model,
-                messages=messages,
-                temperature=cfg.reflector_temperature,
-                response_format=MERGE_RESPONSE_SCHEMA,
-            )
-            raw = response.choices[0].message.content
-            data = json.loads(raw)
-            merged = data.get("scratchpad")
-            if isinstance(merged, str):
-                return merged
-            LOG.warning("Merge attempt %d: scratchpad not a string", attempt + 1)
-        except Exception:
-            LOG.exception("Merge reflector call failed (attempt %d)", attempt + 1)
-
-    LOG.warning("Merge reflector failed; falling back to parent A scratchpad")
-    return scratchpad_a
+    while True:
+        api_key = os.environ.get(cfg.openai_api_key_env)
+        if not api_key:
+            raise RuntimeError(f"Environment variable {cfg.openai_api_key_env} is not set")
+        client = OpenAI(api_key=api_key)
+        for attempt in range(2):
+            try:
+                response = client.chat.completions.create(
+                    model=cfg.reflector_model,
+                    messages=messages,
+                    temperature=cfg.reflector_temperature,
+                    response_format=MERGE_RESPONSE_SCHEMA,
+                )
+                raw = response.choices[0].message.content
+                data = json.loads(raw)
+                merged = data.get("scratchpad")
+                if isinstance(merged, str):
+                    return merged
+                LOG.warning("Merge attempt %d: scratchpad not a string", attempt + 1)
+            except Exception as e:
+                if is_initialized() and is_openai_api_error(e):
+                    if not rotate_to_next_key():
+                        raise RuntimeError(
+                            "All OpenAI keys exhausted (merge reflector): %s" % e
+                        ) from e
+                    break
+                LOG.exception("Merge reflector call failed (attempt %d)", attempt + 1)
+        else:
+            LOG.warning("Merge reflector failed; falling back to parent A scratchpad")
+            return scratchpad_a
 
 
 def log_reflector_call(

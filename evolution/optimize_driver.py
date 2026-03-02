@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .config import EvolutionConfig
 from .eval_context import EvalContext
-from .graph import update_zero_order_fitness_graph
+from .graph import update_coord_rd_grad_stats_graph, update_zero_order_fitness_graph
 from .gpu_utils import validate_2_gpus, verify_gpu_pinning
 from .objective import (
     deltas_dict_to_list,
@@ -208,6 +208,7 @@ def run_zero_order_evolution(cfg: EvolutionConfig) -> None:
 
     signal.signal(signal.SIGINT, _sigint_handler)
 
+    result = None
     try:
         LOG.info(
             "Starting %s: d=%d, budget=%d (remaining=%d)",
@@ -252,6 +253,32 @@ def run_zero_order_evolution(cfg: EvolutionConfig) -> None:
                 "truncation": cfg.grid_allow_truncation,
             })
 
+        if cfg.optimization_method == "coordinate_then_random_direction":
+            ms = ctx.get_method_state("coord_rd")
+            if ms is not None:
+                state.update({
+                    "last_mean_abs_grad_basis": ms.get("mean_abs_grad_basis"),
+                    "last_mean_abs_grad_rand": ms.get("mean_abs_grad_rand"),
+                    "n_basis_pairs": ms.get("n_basis_pairs", 0),
+                    "n_rand_pairs": ms.get("n_rand_pairs", 0),
+                    "coord_alpha_current": ms.get("coord_alpha_current"),
+                    "rand_alpha_current": ms.get("rand_alpha_current"),
+                    "current_alpha": ms.get("current_alpha"),
+                    "current_phase": ms.get("current_phase"),
+                    "current_iteration": ms.get("current_iteration"),
+                    "coord_iter": ms.get("coord_iter"),
+                    "rand_iter": ms.get("rand_iter"),
+                    "coord_k": ms.get("coord_k"),
+                    "coord_alpha0": ms.get("coord_alpha0"),
+                    "coord_alpha_min": ms.get("coord_alpha_min"),
+                    "coord_shrink": ms.get("coord_shrink"),
+                    "rand_alpha0": ms.get("rand_alpha0"),
+                    "rand_alpha_min": ms.get("rand_alpha_min"),
+                    "rand_shrink": ms.get("rand_shrink"),
+                    "rand_dir_dist": ms.get("rand_dir_dist"),
+                    "rand_dirs_per_iter": ms.get("rand_dirs_per_iter"),
+                })
+
         save_json(state, str(state_path))
 
         # ---- Update zero-order fitness graph (final) ----
@@ -262,6 +289,14 @@ def run_zero_order_evolution(cfg: EvolutionConfig) -> None:
                 )
             except Exception:
                 LOG.debug("Final plot update failed (non-fatal)", exc_info=True)
+
+        if cfg.optimization_method == "coordinate_then_random_direction":
+            try:
+                update_coord_rd_grad_stats_graph(
+                    str(out_dir / "zero_order_history.jsonl"), str(out_dir),
+                )
+            except Exception:
+                LOG.debug("Grad stats plot update failed (non-fatal)", exc_info=True)
 
         if ctx.best_x is not None:
             best_deltas = deltas_list_to_dict(ctx.best_x, cluster_ids)
@@ -279,10 +314,20 @@ def run_zero_order_evolution(cfg: EvolutionConfig) -> None:
                     ctx.best_x, cluster_ids, full_indices, cfg,
                     tokenizer, server_holder, out_dir, sglang_gpu_id,
                 )
-                save_json(
-                    {"best_x": ctx.best_x, "f_full_pool": f_full},
-                    str(out_dir / "final_eval.json"),
-                )
+                final_payload: Dict[str, Any] = {
+                    "best_x": ctx.best_x, "f_full_pool": f_full,
+                }
+                if cfg.optimization_method == "coordinate_then_random_direction":
+                    ms = ctx.get_method_state("coord_rd")
+                    src = ms if ms else (result.method_summary if result and result.method_summary else None)
+                    if src:
+                        final_payload.update({
+                            "final_mean_abs_grad_basis": src.get("mean_abs_grad_basis"),
+                            "final_mean_abs_grad_rand": src.get("mean_abs_grad_rand"),
+                            "final_n_basis_pairs": src.get("n_basis_pairs", 0),
+                            "final_n_rand_pairs": src.get("n_rand_pairs", 0),
+                        })
+                save_json(final_payload, str(out_dir / "final_eval.json"))
                 state["final_full_pool_f"] = f_full
                 save_json(state, str(state_path))
                 LOG.info("Full-pool fitness: %.6f", f_full)

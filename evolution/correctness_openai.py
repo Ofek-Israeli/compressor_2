@@ -35,15 +35,12 @@ def evaluate_one(
     """
     Evaluate one prediction against ground truth using OpenAI chat completion.
     Uses the same prompt as learning_grammar/correctness.py.
+    On OpenAI API error, rotates to the next key from the keys file and retries;
+    if all keys are exhausted, raises. Non-API errors return a fallback result.
     """
     from openai import OpenAI
 
-    api_key = os.environ.get(api_key_env)
-    if not api_key:
-        raise RuntimeError(
-            f"Environment variable {api_key_env} is not set (required for correctness evaluation)"
-        )
-    client = OpenAI(api_key=api_key)
+    from .openai_key_rotation import is_initialized, is_openai_api_error, rotate_to_next_key
 
     gt_str = ground_truth[0] if ground_truth else "N/A"
     prompt = f"""You are evaluating whether a predicted answer is correct.
@@ -63,27 +60,39 @@ RULES:
 Respond with JSON:
 {{"is_correct": true/false, "confidence": 0.0-1.0, "reasoning": "brief explanation"}}"""
 
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            max_tokens=500,
-        )
-        text = response.choices[0].message.content or ""
-        json_match = re.search(r'\{[^{}]*"is_correct"[^{}]*\}', text, re.DOTALL)
-        if json_match:
-            data = json.loads(json_match.group())
-            return CorrectnessResult(
-                is_correct=data.get("is_correct", False),
-                confidence=float(data.get("confidence", 0.5)),
-                reasoning=str(data.get("reasoning", "")),
+    while True:
+        api_key = os.environ.get(api_key_env)
+        if not api_key:
+            raise RuntimeError(
+                f"Environment variable {api_key_env} is not set (required for correctness evaluation)"
             )
-    except Exception as e:
-        LOG.warning("Correctness evaluation failed: %s", e)
-
-    return CorrectnessResult(
-        is_correct=False,
-        confidence=0.0,
-        reasoning="Evaluation failed",
-    )
+        client = OpenAI(api_key=api_key)
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0,
+                max_tokens=500,
+            )
+            text = response.choices[0].message.content or ""
+            json_match = re.search(r'\{[^{}]*"is_correct"[^{}]*\}', text, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group())
+                return CorrectnessResult(
+                    is_correct=data.get("is_correct", False),
+                    confidence=float(data.get("confidence", 0.5)),
+                    reasoning=str(data.get("reasoning", "")),
+                )
+        except Exception as e:
+            if is_initialized() and is_openai_api_error(e):
+                if not rotate_to_next_key():
+                    raise RuntimeError(
+                        "All OpenAI keys exhausted (correctness): %s" % e
+                    ) from e
+                continue
+            LOG.warning("Correctness evaluation failed: %s", e)
+            return CorrectnessResult(
+                is_correct=False,
+                confidence=0.0,
+                reasoning="Evaluation failed",
+            )

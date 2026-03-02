@@ -20,7 +20,6 @@ class EvolutionConfig:
     # --- Evolution parameters ---
     minibatch_size: int = 5
     max_iterations: int = 20
-    shortness_scale: int = 300  # scale in shortness_score = 1 / (1 + mean_tok_len / scale)
 
     # --- SGLang server ---
     sglang_model_path: str = ""
@@ -41,6 +40,7 @@ class EvolutionConfig:
     # --- Reflector (OpenAI) ---
     reflector_model: str = "gpt-4o"
     openai_api_key_env: str = "OPENAI_API_KEY"
+    openai_keys_file: str = ""  # Path to file with API keys (one per line); required for evolution
     reflector_temperature: float = 0.7
 
     # --- Generate processor ---
@@ -108,6 +108,28 @@ class EvolutionConfig:
     hybrid_global_method: str = "differential_evolution"
     hybrid_global_evals: int = 0
     hybrid_local_evals: int = 0
+
+    # --- Coordinate-then-random-direction: Phase 1 (coordinate / standard-basis) ---
+    coord_rd_coord_k: int = 10
+    coord_rd_coord_alpha0: float = 0.1
+    coord_rd_coord_alpha_min: float = 1e-6
+    coord_rd_coord_shrink: float = 0.5
+    coord_rd_coord_num_coords_per_iter: int = 0
+    coord_rd_coord_opportunistic: bool = False
+    coord_rd_coord_improvement_eps: float = 0.0
+    coord_rd_coord_sample_with_replacement: bool = False
+    coord_rd_coord_shuffle_each_iter: bool = True
+    coord_rd_coord_max_coords_total: int = 0
+
+    # --- Coordinate-then-random-direction: Phase 2 (random direction) ---
+    coord_rd_rand_alpha0: float = 0.1
+    coord_rd_rand_alpha_min: float = 1e-6
+    coord_rd_rand_shrink: float = 0.5
+    coord_rd_rand_dir_dist: str = "gaussian_unit"
+    coord_rd_rand_dirs_per_iter: int = 1
+    coord_rd_rand_improvement_eps: float = 0.0
+    coord_rd_rand_use_current_x_for_next_dir: bool = True
+    coord_rd_rand_max_dir_pairs_total: int = 0
 
     # --- Derived (set by loader/driver) ---
     expected_cluster_ids: List[str] = field(default_factory=list)

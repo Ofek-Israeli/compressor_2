@@ -108,7 +108,6 @@ def _make_cfg(**overrides: Any) -> EvolutionConfig:
         hybrid_local_evals=0,
         lambda_shortness=0.5,
         lambda_correctness=0.5,
-        shortness_scale=300,
     )
     defaults.update(overrides)
     return EvolutionConfig(**defaults)

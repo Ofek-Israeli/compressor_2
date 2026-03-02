@@ -13,7 +13,7 @@ This document describes the **current implementation** of the evolution loop in 
 - **Fitness function:**  
   `fitness = lambda_shortness * shortness_score + lambda_correctness * correctness_ratio`  
   where:
-  - `shortness_score = 1 / (1 + mean_tok_len / shortness_scale)` (unchanged).
+  - `shortness_score = 1 / (1 + mean_tok_len / llm_max_tokens)` (CONFIG_LLM_MAX_TOKENS sets both max reply tokens and this scale).
   - `correctness_ratio = num_correct / len(minibatch)`.
   - `lambda_shortness` and `lambda_correctness` are **configurable in Kconfig** only; **no defaults** — if not set, raise an error (see §2).
 - **Mutation:** Reflector-based (full-vector). For a given individual (delta vector):
@@ -28,7 +28,7 @@ This document describes the **current implementation** of the evolution loop in 
 - **GPU and parallelism:** Fitness evaluation uses both GPUs: embedding/generate-processor on `cuda:0`, SGLang on `cuda:1`. See **§5** for the mandatory 2-GPU setup (always-on prefetch, SGLang kept running, correctness parallelised).
 - **Evolution loop (high level):**
   - **How to run:** `PYTHONPATH=/workspace python3 -m compressor_2 evolve --config <path-to-.config>`. From the repo root, typically `--config compressor_2/.config` or `--config .config` if run from `compressor_2/`. The **only** evolution command; no mode flags. Requires exactly 2 visible GPUs (fail fast at startup if not).
-  1. **Load config:** Kconfig (including training set indices, lambda_shortness, lambda_correctness, shortness_scale, reflector, paths, SGLang settings). Non-GA parameters (shortness_scale, cluster descriptions, reflector, SGLang, correctness) come from existing Kconfig; §2 lists only new GA-specific symbols.
+  1. **Load config:** Kconfig (including training set indices, lambda_shortness, lambda_correctness, llm_max_tokens, reflector, paths, SGLang settings). Non-GA parameters (llm_max_tokens, cluster descriptions, reflector, SGLang, correctness) come from existing Kconfig; §2 lists only new GA-specific symbols.
   2. **Pool:** Resolve pool example indices from config and keep them fixed for the whole run. Each generation, a minibatch of CONFIG_MINIBATCH_SIZE is sampled from the pool.
   3. **Initial population:** **One individual cloned** — take the single initial deltas from config and clone it **population_size** times (no perturbation). Set `ind.scratchpad = ""` for every initial individual. When creating or cloning individuals, ensure the `scratchpad` attribute is set (and that cloning copies it). Population size from Kconfig.
   4. **Generation loop (as implemented):**
@@ -48,7 +48,7 @@ This document describes the **current implementation** of the evolution loop in 
 
 ## 2. Kconfig Additions
 
-- **Scope of §2:** All non-GA parameters referenced by the evolution loop (e.g. CONFIG_SHORTNESS_SCALE, CONFIG_CLUSTER_DESCRIPTIONS_PATH, reflector model/API config, SGLang/server config, and correctness/evaluation config) are taken from **existing Kconfig options** already in the repo; §2 lists **only the new GA-specific symbols**.
+- **Scope of §2:** All non-GA parameters referenced by the evolution loop (e.g. CONFIG_LLM_MAX_TOKENS, CONFIG_CLUSTER_DESCRIPTIONS_PATH, reflector model/API config, SGLang/server config, and correctness/evaluation config) are taken from **existing Kconfig options** already in the repo; §2 lists **only the new GA-specific symbols**.
 - **No defaults for genetic evolution options:** All options below are required. Use **sentinel defaults** (e.g. `-1` for ints, `""` for strings); **loader raises at startup** if any genetic evolution option is still sentinel (no silent defaults).
 - **Fitness weights:** `CONFIG_LAMBDA_SHORTNESS`, `CONFIG_LAMBDA_CORRECTNESS` (float). Validation: required (no sentinel); loader raises if not set. Values are used in the fitness formula as-is (e.g. non-negative weights, or negative for penalty terms).
 - **Pool:** Same as pool indices (§1). Use existing `CONFIG_FINANCEBENCH_POOL_INDICES`; if pool is **"all"**, full dataset = training set.

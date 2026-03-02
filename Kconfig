@@ -137,6 +137,13 @@ config OPT_METHOD_HYBRID
 	help
 	  Two-phase: global optimizer first, then local TR-DFO refinement.
 
+config OPT_METHOD_COORDINATE_THEN_RANDOM_DIRECTION
+	bool "Coordinate then Random Direction"
+	help
+	  Two-phase zero-order: coordinate (standard-basis) search for K
+	  iterations, then random-direction steps until budget exhausted.
+	  Phase-specific alpha/shrink/improvement_eps.
+
 endchoice
 
 # ─────────────────────────────────────────────────────
@@ -157,14 +164,6 @@ config LAMBDA_CORRECTNESS
 	help
 	  Weight for the correctness component of fitness.
 	  Required — loader raises at startup if empty.
-
-config SHORTNESS_SCALE
-	int "Shortness score scale (tokens)"
-	default 300
-	range 50 2000
-	help
-	  Scale used in shortness_score = 1/(1 + mean_tok_len/scale).
-	  Higher values make the shortness component less sensitive to length.
 
 endmenu
 
@@ -271,9 +270,10 @@ config EMBEDDING_MODEL
 config GEN_BATCH_SIZE
 	int "Embedding batch size"
 	default 512
-	range 32 4096
+	range 32 16384
 	help
 	  Batch size for embedding the LLM vocabulary.
+	  Optional values: 4096, 8192, 16384 (higher = faster, more VRAM).
 
 endmenu
 
@@ -370,6 +370,14 @@ config OPENAI_API_KEY_ENV
 	help
 	  Name of the environment variable holding the OpenAI API key.
 
+config OPENAI_KEYS_FILE
+	string "OpenAI API keys file path"
+	default "/workspace/compressor_2/openai_keys.txt"
+	help
+	  Path to a file containing OpenAI API keys, one per line. At evolution
+	  start the first key is used; on API errors the next key is tried. If the
+	  file is missing or empty, evolution will raise an error and terminate at start.
+
 config REFLECTOR_TEMPERATURE
 	string "Reflector sampling temperature"
 	default "0.7"
@@ -465,6 +473,7 @@ config LLM_MAX_TOKENS
 	range 1 32768
 	help
 	  Maximum number of tokens the LLM may generate per reply.
+	  Also used as the shortness score scale: shortness_score = 1/(1 + mean_tok_len/this_value).
 
 config ENABLE_CACHE
 	bool "Enable evaluation cache"
@@ -622,5 +631,134 @@ config HYBRID_LOCAL_EVALS
 	default 0
 	help
 	  Max evals for the local (TR-DFO) phase. 0 means remaining budget.
+
+endmenu
+
+menu "Coordinate-then-Random-Direction: Phase 1 (Coordinate)"
+	depends on OPT_METHOD_COORDINATE_THEN_RANDOM_DIRECTION
+
+config COORD_RD_COORD_K
+	int "Coordinate iterations (K)"
+	default 10
+	range 1 100000
+	help
+	  Number of coordinate-search iterations in phase 1.
+
+config COORD_RD_COORD_ALPHA0
+	string "Initial step size (alpha0)"
+	default "0.1"
+	help
+	  Initial step size for coordinate phase. Must be > 0.
+
+config COORD_RD_COORD_ALPHA_MIN
+	string "Minimum step size (alpha_min)"
+	default "0.000001"
+	help
+	  Minimum alpha for coordinate phase. Must be > 0 and <= alpha0.
+
+config COORD_RD_COORD_SHRINK
+	string "Shrink factor"
+	default "0.5"
+	help
+	  Alpha shrink factor in (0, 1) on no improvement.
+
+config COORD_RD_COORD_NUM_COORDS_PER_ITER
+	int "Coordinates per iteration (0 = all)"
+	default 0
+	help
+	  Number of standard-basis directions per iteration.
+	  0 means all d dimensions. Validated at runtime: in [1, d] or 0.
+
+config COORD_RD_COORD_OPPORTUNISTIC
+	bool "Opportunistic (stop at first improvement)"
+	default n
+	help
+	  If y, stop at first improving coordinate in an iteration.
+
+config COORD_RD_COORD_IMPROVEMENT_EPS
+	string "Improvement epsilon"
+	default "0.0"
+	help
+	  Minimum improvement to accept a move. >= 0.
+
+config COORD_RD_COORD_SAMPLE_WITH_REPLACEMENT
+	bool "Sample coords with replacement"
+	default n
+	help
+	  When NUM_COORDS_PER_ITER < d, sample with replacement.
+
+config COORD_RD_COORD_SHUFFLE_EACH_ITER
+	bool "Shuffle coordinate order each iteration"
+	default y
+	help
+	  Shuffle the order of coordinate indices each iteration.
+
+config COORD_RD_COORD_MAX_COORDS_TOTAL
+	int "Max coordinate pairs total (0 = disabled)"
+	default 0
+	help
+	  Hard cap on coordinate +/- pairs in phase 1.
+	  0 means no cap (only global max_evals applies).
+	  When > 0, both this cap and global max_evals are enforced.
+
+endmenu
+
+menu "Coordinate-then-Random-Direction: Phase 2 (Random Direction)"
+	depends on OPT_METHOD_COORDINATE_THEN_RANDOM_DIRECTION
+
+config COORD_RD_RAND_ALPHA0
+	string "Initial step size (alpha0)"
+	default "0.1"
+	help
+	  Initial step size for random-direction phase. Alpha is reset
+	  to this value at the phase 1 -> phase 2 transition.
+
+config COORD_RD_RAND_ALPHA_MIN
+	string "Minimum step size (alpha_min)"
+	default "0.000001"
+	help
+	  Minimum alpha for random-direction phase.
+
+config COORD_RD_RAND_SHRINK
+	string "Shrink factor"
+	default "0.5"
+	help
+	  Alpha shrink factor in (0, 1) on no improvement.
+
+config COORD_RD_RAND_DIR_DIST
+	string "Direction distribution"
+	default "gaussian_unit"
+	help
+	  How to sample random unit direction u:
+	  gaussian_unit (z~N(0,I), u=z/||z||)
+	  or rademacher_unit (components +/-1, then normalize).
+
+config COORD_RD_RAND_DIRS_PER_ITER
+	int "Directions per iteration"
+	default 1
+	range 1 10000
+	help
+	  Number of random directions to try per iteration.
+
+config COORD_RD_RAND_IMPROVEMENT_EPS
+	string "Improvement epsilon"
+	default "0.0"
+	help
+	  Minimum improvement to accept a move. >= 0.
+
+config COORD_RD_RAND_USE_CURRENT_X_FOR_NEXT_DIR
+	bool "Use current best x for next direction"
+	default y
+	help
+	  If y, use the best x found so far within the iteration as
+	  the starting point for the next direction.
+
+config COORD_RD_RAND_MAX_DIR_PAIRS_TOTAL
+	int "Max direction pairs total (0 = disabled)"
+	default 0
+	help
+	  Hard cap on random-direction +/- pairs in phase 2.
+	  0 means no cap. When > 0, both this cap and global
+	  max_evals are enforced.
 
 endmenu

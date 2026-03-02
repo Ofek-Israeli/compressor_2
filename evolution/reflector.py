@@ -143,24 +143,39 @@ def call_reflector(
     cfg: EvolutionConfig,
     messages: List[Dict[str, str]],
 ) -> Dict[str, Any]:
-    """Call OpenAI with JSON schema enforcement; return parsed JSON dict."""
-    api_key = os.environ.get(cfg.openai_api_key_env)
-    if not api_key:
-        raise RuntimeError(
-            f"Environment variable {cfg.openai_api_key_env} is not set"
-        )
-    client = OpenAI(api_key=api_key)
+    """Call OpenAI with JSON schema enforcement; return parsed JSON dict.
+    On OpenAI API error, rotates to the next key and retries; if all keys
+    exhausted, raises.
+    """
+    from .openai_key_rotation import is_initialized, is_openai_api_error, rotate_to_next_key
+
     schema = _build_json_schema(cfg.expected_cluster_ids)
     LOG.info("Calling reflector (%s)...", cfg.reflector_model)
-    response = client.chat.completions.create(
-        model=cfg.reflector_model,
-        messages=messages,
-        temperature=cfg.reflector_temperature,
-        response_format=schema,
-    )
-    raw = response.choices[0].message.content
-    LOG.debug("Reflector raw response: %s", raw[:200])
-    return json.loads(raw)
+    while True:
+        api_key = os.environ.get(cfg.openai_api_key_env)
+        if not api_key:
+            raise RuntimeError(
+                f"Environment variable {cfg.openai_api_key_env} is not set"
+            )
+        client = OpenAI(api_key=api_key)
+        try:
+            response = client.chat.completions.create(
+                model=cfg.reflector_model,
+                messages=messages,
+                temperature=cfg.reflector_temperature,
+                response_format=schema,
+            )
+            raw = response.choices[0].message.content
+            LOG.debug("Reflector raw response: %s", raw[:200])
+            return json.loads(raw)
+        except Exception as e:
+            if is_initialized() and is_openai_api_error(e):
+                if not rotate_to_next_key():
+                    raise RuntimeError(
+                        "All OpenAI keys exhausted (reflector): %s" % e
+                    ) from e
+                continue
+            raise
 
 
 def validate_reflector_output(

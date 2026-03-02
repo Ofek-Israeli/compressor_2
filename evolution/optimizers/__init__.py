@@ -10,8 +10,8 @@ See docs/zero_order_opt_plan.md §3.3, §4.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..eval_context import EvalContext
@@ -24,6 +24,7 @@ class OptimizerResult:
     best_f: float
     n_evals_used: int
     history_path: Optional[str] = None
+    method_summary: Optional[Dict[str, Any]] = field(default=None, repr=False)
 
 
 OptimizerFn = Callable[
@@ -43,6 +44,7 @@ _REGISTRY: dict[str, str] = {
     "tr_dfo": "evolution.optimizers.tr_dfo",
     "skopt": "evolution.optimizers.skopt_opt",
     "hybrid": "evolution.optimizers.hybrid",
+    "coordinate_then_random_direction": "evolution.optimizers.coordinate_then_random_direction",
 }
 
 

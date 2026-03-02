@@ -214,7 +214,7 @@ def run_evolution(cfg: EvolutionConfig) -> None:
         for h in raw_history:
             if "composite_score" not in h:
                 ml = h.get("mean_token_length", 0)
-                scale = getattr(cfg, "shortness_scale", 300)
+                scale = getattr(cfg, "llm_max_tokens", 2048)
                 h = dict(h)
                 h["shortness_score"] = 1.0 / (1.0 + ml / scale)
                 h["correctness_ratio"] = 0.0
@@ -332,7 +332,7 @@ def run_evolution(cfg: EvolutionConfig) -> None:
             mean_tok_len = sum(s[2] for s in all_scored) / len(all_scored)
             num_correct = sum(1 for r in results if r.get("is_correct", False))
             correctness_ratio = num_correct / len(results)
-            shortness_score = 1.0 / (1.0 + mean_tok_len / cfg.shortness_scale)
+            shortness_score = 1.0 / (1.0 + mean_tok_len / cfg.llm_max_tokens)
             composite_score = 0.4 * shortness_score + 0.6 * correctness_ratio
 
             LOG.info(

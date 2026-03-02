@@ -85,6 +85,9 @@ class EvalContext:
 
         self._history_path = str(out_dir / "zero_order_history.jsonl")
 
+        self._extra_log_fields: Dict[str, Any] = {}
+        self._method_states: Dict[str, Dict[str, Any]] = {}
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -131,6 +134,23 @@ class EvalContext:
             f = self.evaluate(x, next_x=next_x)
             results.append(f)
         return results
+
+    def set_extra_log_fields(self, d: Dict[str, Any]) -> None:
+        """Set fields merged into every subsequent JSONL eval record."""
+        self._extra_log_fields = dict(d)
+
+    def get_extra_log_fields(self) -> Dict[str, Any]:
+        """Return the current extra-log-fields dict."""
+        return dict(self._extra_log_fields)
+
+    def set_method_state(self, name: str, state: Dict[str, Any]) -> None:
+        """Store optimizer-specific state retrievable by the driver."""
+        self._method_states[name] = dict(state)
+
+    def get_method_state(self, name: str) -> Optional[Dict[str, Any]]:
+        """Return previously stored method state, or None."""
+        s = self._method_states.get(name)
+        return dict(s) if s is not None else None
 
     def shutdown(self) -> None:
         """Drain prefetch executor.  Call once at the end of the run."""
@@ -282,6 +302,8 @@ class EvalContext:
             record["f"] = f
         if error is not None:
             record["error"] = error
+        if self._extra_log_fields:
+            record.update(self._extra_log_fields)
         try:
             with open(self._history_path, "a") as fp:
                 fp.write(json.dumps(record) + "\n")

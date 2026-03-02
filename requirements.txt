@@ -14,20 +14,19 @@ matplotlib
 numpy
 openai
 optuna
+pdfo
+Py-BOBYQA
 pyyaml
 requests
 scikit-learn
 scipy
+scikit-optimize
 sentence-transformers
+ConfigSpace
+smac
 sgl_kernel
 sglang
 transformers
 
 # Optional (install for specific zero-order methods):
 # cma               # cmaes
-# optuna            # optuna_tpe (now in main deps)
-# smac              # smac_opt (+ ConfigSpace)
-# ConfigSpace       # smac_opt
-# scikit-optimize   # skopt_opt
-# pdfo              # tr_dfo (BOBYQA/NEWUOA)
-# pybobyqa          # tr_dfo alternative

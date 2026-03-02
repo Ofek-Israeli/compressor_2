@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 LOG = logging.getLogger(__name__)
 
 ZERO_ORDER_FITNESS_FILENAME = "zero_order_fitness.png"
+COORD_RD_GRAD_STATS_FILENAME = "zero_order_grad_stats.png"
 
 
 def update_zero_order_fitness_graph(
@@ -86,6 +87,88 @@ def update_zero_order_fitness_graph(
     fig.savefig(str(path), dpi=120, bbox_inches="tight")
     plt.close(fig)
     LOG.info("Zero-order graph updated: %s", path)
+
+
+def update_coord_rd_grad_stats_graph(
+    history_path: str,
+    output_dir: str,
+) -> None:
+    """Plot derivative magnitude estimates for coordinate_then_random_direction.
+
+    Reads zero_order_history.jsonl, extracts lines with mean_abs_grad_basis /
+    mean_abs_grad_rand fields, and produces zero_order_grad_stats.png.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        LOG.warning("matplotlib not available; skipping zero_order_grad_stats.png")
+        return
+
+    hist_path = Path(history_path)
+    if not hist_path.exists():
+        return
+
+    indices: List[int] = []
+    basis_vals: List[Optional[float]] = []
+    rand_vals: List[Optional[float]] = []
+    phases: List[str] = []
+    idx = 0
+
+    with open(hist_path, "r") as fp:
+        for line in fp:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if "current_phase" not in rec:
+                continue
+            indices.append(rec.get("eval_id", idx))
+            basis_vals.append(rec.get("mean_abs_grad_basis"))
+            rand_vals.append(rec.get("mean_abs_grad_rand"))
+            phases.append(rec.get("current_phase", ""))
+            idx += 1
+
+    if not indices:
+        return
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    basis_x = [i for i, v in zip(indices, basis_vals) if v is not None]
+    basis_y = [v for v in basis_vals if v is not None]
+    rand_x = [i for i, v in zip(indices, rand_vals) if v is not None]
+    rand_y = [v for v in rand_vals if v is not None]
+
+    if basis_x:
+        ax.plot(basis_x, basis_y, "-", linewidth=1.5, color="C0", label="mean |grad| basis")
+    if rand_x:
+        ax.plot(rand_x, rand_y, "-", linewidth=1.5, color="C1", label="mean |grad| random")
+
+    # Vertical line at phase switch
+    prev_phase = None
+    for i, ph in zip(indices, phases):
+        if prev_phase == "coordinate" and ph == "random_direction":
+            ax.axvline(x=i, color="C3", linestyle="--", alpha=0.7, label="Phase switch")
+            break
+        prev_phase = ph
+
+    ax.set_xlabel("Evaluation index")
+    ax.set_ylabel("Mean |directional derivative|")
+    ax.set_title("Coordinate-then-random-direction: derivative magnitude estimates")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    path = out / COORD_RD_GRAD_STATS_FILENAME
+    fig.savefig(str(path), dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    LOG.info("Grad stats graph updated: %s", path)
 
 
 def update_graph(

@@ -112,6 +112,7 @@ def build_runner_config(
         runner_cfg["sglang"] = {}
     runner_cfg["sglang"]["base_url"] = f"http://localhost:{cfg.sglang_port}"
     runner_cfg["sglang"]["timeout_s"] = cfg.runner_timeout_s
+    runner_cfg["max_new_tokens"] = cfg.llm_max_tokens
 
     tmp = tempfile.NamedTemporaryFile(
         mode="w", suffix=".yaml", delete=False, prefix="ga_runner_",
@@ -125,6 +126,7 @@ def run_training_set(
     runner_config_path: str,
     financebench_jsonl: str,
     processor_path: str,
+    max_new_tokens: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     import yaml
 
@@ -153,6 +155,8 @@ def run_training_set(
         "--output", tmp_output,
         "--logit-processor", processor_path,
     ]
+    if max_new_tokens is not None:
+        cmd.extend(["--max-new-tokens", str(max_new_tokens)])
     t0 = time.monotonic()
     result = subprocess.run(cmd, capture_output=False, text=True)
     elapsed = time.monotonic() - t0
@@ -241,6 +245,7 @@ def evaluate_x(
     try:
         results = run_training_set(
             tmp_runner_cfg, cfg.financebench_jsonl, processor_path,
+            max_new_tokens=cfg.llm_max_tokens,
         )
     finally:
         os.unlink(tmp_runner_cfg)
@@ -263,7 +268,7 @@ def evaluate_x(
 
     mean_tok_len = total_tok_len / len(results)
     correctness_ratio = num_correct / len(results)
-    shortness_score = 1.0 / (1.0 + mean_tok_len / cfg.shortness_scale)
+    shortness_score = 1.0 / (1.0 + mean_tok_len / cfg.llm_max_tokens)
     fitness = cfg.lambda_shortness * shortness_score + cfg.lambda_correctness * correctness_ratio
 
     LOG.info(

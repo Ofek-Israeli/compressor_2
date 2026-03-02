@@ -42,31 +42,34 @@ def run(
     ub = np.full(d, hi)
     x0_arr = np.array(x0)
 
+    _pdfo_failed = None
     try:
         try:
-            import pdfo
-            LOG.info("Using pdfo backend (%s)", method)
-            pdfo.pdfo(
+            import pybobyqa
+            LOG.info("Using pybobyqa backend (BOBYQA)")
+            pybobyqa.solve(
                 _obj, x0_arr,
-                method=method,
-                bounds=pdfo.Bounds(lb, ub),
-                options={"maxfev": ctx.max_evals},
+                bounds=(lb, ub),
+                maxfun=ctx.max_evals,
+                seek_global_minimum=False,
             )
         except ImportError:
             try:
-                import pybobyqa
-                LOG.info("Using pybobyqa backend")
-                pybobyqa.solve(
+                from scipy.optimize import Bounds
+                import pdfo
+                LOG.info("Using pdfo backend (%s)", method)
+                pdfo.pdfo(
                     _obj, x0_arr,
-                    bounds=(lb, ub),
-                    maxfun=ctx.max_evals,
-                    seek_global_minimum=False,
+                    method=method,
+                    bounds=Bounds(lb, ub),
+                    options={"maxfev": ctx.max_evals},
                 )
-            except ImportError:
+            except (ImportError, AttributeError, OSError) as e:
+                _pdfo_failed = e
                 raise ImportError(
-                    "tr_dfo method requires 'pdfo' or 'pybobyqa'. "
-                    "Install with: pip install pdfo  OR  pip install pybobyqa"
-                )
+                    "tr_dfo requires 'pybobyqa' or 'pdfo'. pybobyqa is recommended (NumPy 2 compatible). "
+                    "Install with: pip install pybobyqa   OR   pip install pdfo (pdfo may need numpy<2)"
+                ) from _pdfo_failed
     except BudgetExceeded:
         LOG.info("tr_dfo: budget exhausted at %d/%d evals", ctx.n_evals, ctx.max_evals)
 

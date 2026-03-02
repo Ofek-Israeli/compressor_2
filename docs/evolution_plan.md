@@ -57,7 +57,7 @@ All other clusters (keys `"2"` … `"11"` or as in `cluster_descriptions.json`) 
 - Add a **Kconfig** (and a `.config` / defconfig) under `compressor_2` so that:
   - **FinanceBench pool:** path to FinanceBench JSONL; and either a list of **example indices** (0-based) to form the pool, or “all” (use all examples). Each iteration the minibatch is **randomly sampled** from this pool (reproducibility not required).
   - **Minibatch size:** number of FinanceBench examples per iteration.
-  - **SHORTNESS_SCALE:** scale (tokens) for shortness_score = 1/(1 + mean_tok_len/scale); configurable in Kconfig.
+  - **LLM_MAX_TOKENS:** max tokens per LLM reply; also used as the scale in shortness_score = 1/(1 + mean_tok_len/llm_max_tokens). Configurable in Kconfig.
   - **Correctness:** model and tolerance for per-example correctness (learning_grammar); Minions repo path.
   - **Number of evolution iterations:** max iterations; can also stop early if desired later.
   - **Reflector:** model name (default gpt-4o), API key from env (e.g. `OPENAI_API_KEY`).

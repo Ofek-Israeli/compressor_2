@@ -131,7 +131,7 @@ def _safe_bool(v: Dict[str, object], key: str, default: bool) -> bool:
 _VALID_METHODS = frozenset({
     "deap", "grid_search", "random_search", "spsa", "random_direction_2pt",
     "differential_evolution", "cmaes", "optuna_tpe", "smac", "tr_dfo",
-    "skopt", "hybrid",
+    "skopt", "hybrid", "coordinate_then_random_direction",
 })
 
 _OPT_METHOD_MAP = {
@@ -147,6 +147,7 @@ _OPT_METHOD_MAP = {
     "OPT_METHOD_TR_DFO": "tr_dfo",
     "OPT_METHOD_SKOPT": "skopt",
     "OPT_METHOD_HYBRID": "hybrid",
+    "OPT_METHOD_COORDINATE_THEN_RANDOM_DIRECTION": "coordinate_then_random_direction",
 }
 
 
@@ -203,6 +204,43 @@ def _validate_zero_order_options(cfg: EvolutionConfig) -> None:
         if cfg.grid_batch_size < 1:
             errors.append("CONFIG_GRID_BATCH_SIZE must be >= 1")
 
+    if cfg.optimization_method == "coordinate_then_random_direction":
+        # Phase 1 (coordinate)
+        if cfg.coord_rd_coord_k < 1:
+            errors.append("COORD_RD_COORD_K must be > 0")
+        if cfg.coord_rd_coord_alpha0 <= 0:
+            errors.append("COORD_RD_COORD_ALPHA0 must be > 0")
+        if cfg.coord_rd_coord_alpha_min <= 0:
+            errors.append("COORD_RD_COORD_ALPHA_MIN must be > 0")
+        if cfg.coord_rd_coord_alpha_min > cfg.coord_rd_coord_alpha0:
+            errors.append("COORD_RD_COORD_ALPHA_MIN must be <= COORD_RD_COORD_ALPHA0")
+        if not (0 < cfg.coord_rd_coord_shrink < 1):
+            errors.append("COORD_RD_COORD_SHRINK must be in (0, 1)")
+        if cfg.coord_rd_coord_improvement_eps < 0:
+            errors.append("COORD_RD_COORD_IMPROVEMENT_EPS must be >= 0")
+        if cfg.coord_rd_coord_max_coords_total < 0:
+            errors.append("COORD_RD_COORD_MAX_COORDS_TOTAL must be >= 0")
+        # Phase 2 (random)
+        if cfg.coord_rd_rand_alpha0 <= 0:
+            errors.append("COORD_RD_RAND_ALPHA0 must be > 0")
+        if cfg.coord_rd_rand_alpha_min <= 0:
+            errors.append("COORD_RD_RAND_ALPHA_MIN must be > 0")
+        if cfg.coord_rd_rand_alpha_min > cfg.coord_rd_rand_alpha0:
+            errors.append("COORD_RD_RAND_ALPHA_MIN must be <= COORD_RD_RAND_ALPHA0")
+        if not (0 < cfg.coord_rd_rand_shrink < 1):
+            errors.append("COORD_RD_RAND_SHRINK must be in (0, 1)")
+        if cfg.coord_rd_rand_improvement_eps < 0:
+            errors.append("COORD_RD_RAND_IMPROVEMENT_EPS must be >= 0")
+        if cfg.coord_rd_rand_dirs_per_iter < 1:
+            errors.append("COORD_RD_RAND_DIRS_PER_ITER must be >= 1")
+        if cfg.coord_rd_rand_dir_dist not in ("gaussian_unit", "rademacher_unit"):
+            errors.append(
+                f"COORD_RD_RAND_DIR_DIST must be 'gaussian_unit' or 'rademacher_unit', "
+                f"got {cfg.coord_rd_rand_dir_dist!r}"
+            )
+        if cfg.coord_rd_rand_max_dir_pairs_total < 0:
+            errors.append("COORD_RD_RAND_MAX_DIR_PAIRS_TOTAL must be >= 0")
+
     if errors:
         raise ValueError(
             "Zero-order config validation failed:\n  " + "\n  ".join(errors)
@@ -239,7 +277,6 @@ def load_config(config_path: str, validate_ga: bool = True) -> EvolutionConfig:
         output_dir=_resolve_path(config_dir, str(v.get("OUTPUT_DIR", "outputs/evolution"))),
         minibatch_size=int(v.get("MINIBATCH_SIZE", 5)),
         max_iterations=int(v.get("MAX_ITERATIONS", 20)),
-        shortness_scale=int(v.get("SHORTNESS_SCALE", 300)),
         correctness_model=str(v.get("CORRECTNESS_MODEL", "gpt-4o")),
         correctness_tolerance=float(v.get("CORRECTNESS_TOLERANCE", 0.10)),
         minions_repo=_resolve_path(config_dir, str(v.get("MINIONS_REPO", "/workspace/minions_channel"))),
@@ -252,6 +289,7 @@ def load_config(config_path: str, validate_ga: bool = True) -> EvolutionConfig:
         runner_timeout_s=float(v.get("RUNNER_TIMEOUT_S", 300)),
         reflector_model=str(v.get("REFLECTOR_MODEL", "gpt-4o")),
         openai_api_key_env=str(v.get("OPENAI_API_KEY_ENV", "OPENAI_API_KEY")),
+        openai_keys_file=_resolve_path(config_dir, str(v.get("OPENAI_KEYS_FILE", "/workspace/compressor_2/openai_keys.txt"))),
         reflector_temperature=_safe_float(v, "REFLECTOR_TEMPERATURE", 0.7),
         embedding_model=str(v.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")),
         gen_batch_size=int(v.get("GEN_BATCH_SIZE", 512)),
@@ -303,6 +341,26 @@ def load_config(config_path: str, validate_ga: bool = True) -> EvolutionConfig:
         hybrid_global_method=str(v.get("HYBRID_GLOBAL_METHOD", "differential_evolution")),
         hybrid_global_evals=int(v.get("HYBRID_GLOBAL_EVALS", 0)),
         hybrid_local_evals=int(v.get("HYBRID_LOCAL_EVALS", 0)),
+        # Coordinate-then-random-direction: Phase 1
+        coord_rd_coord_k=int(v.get("COORD_RD_COORD_K", 10)),
+        coord_rd_coord_alpha0=_safe_float(v, "COORD_RD_COORD_ALPHA0", 0.1),
+        coord_rd_coord_alpha_min=_safe_float(v, "COORD_RD_COORD_ALPHA_MIN", 1e-6),
+        coord_rd_coord_shrink=_safe_float(v, "COORD_RD_COORD_SHRINK", 0.5),
+        coord_rd_coord_num_coords_per_iter=int(v.get("COORD_RD_COORD_NUM_COORDS_PER_ITER", 0)),
+        coord_rd_coord_opportunistic=_safe_bool(v, "COORD_RD_COORD_OPPORTUNISTIC", False),
+        coord_rd_coord_improvement_eps=_safe_float(v, "COORD_RD_COORD_IMPROVEMENT_EPS", 0.0),
+        coord_rd_coord_sample_with_replacement=_safe_bool(v, "COORD_RD_COORD_SAMPLE_WITH_REPLACEMENT", False),
+        coord_rd_coord_shuffle_each_iter=_safe_bool(v, "COORD_RD_COORD_SHUFFLE_EACH_ITER", True),
+        coord_rd_coord_max_coords_total=int(v.get("COORD_RD_COORD_MAX_COORDS_TOTAL", 0)),
+        # Coordinate-then-random-direction: Phase 2
+        coord_rd_rand_alpha0=_safe_float(v, "COORD_RD_RAND_ALPHA0", 0.1),
+        coord_rd_rand_alpha_min=_safe_float(v, "COORD_RD_RAND_ALPHA_MIN", 1e-6),
+        coord_rd_rand_shrink=_safe_float(v, "COORD_RD_RAND_SHRINK", 0.5),
+        coord_rd_rand_dir_dist=str(v.get("COORD_RD_RAND_DIR_DIST", "gaussian_unit")),
+        coord_rd_rand_dirs_per_iter=int(v.get("COORD_RD_RAND_DIRS_PER_ITER", 1)),
+        coord_rd_rand_improvement_eps=_safe_float(v, "COORD_RD_RAND_IMPROVEMENT_EPS", 0.0),
+        coord_rd_rand_use_current_x_for_next_dir=_safe_bool(v, "COORD_RD_RAND_USE_CURRENT_X_FOR_NEXT_DIR", True),
+        coord_rd_rand_max_dir_pairs_total=int(v.get("COORD_RD_RAND_MAX_DIR_PAIRS_TOTAL", 0)),
     )
 
     if method == "deap":
