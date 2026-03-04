@@ -147,12 +147,13 @@ def call_reflector(
     On OpenAI API error, rotates to the next key and retries; if all keys
     exhausted, raises.
     """
-    from .openai_key_rotation import is_initialized, is_openai_api_error, rotate_to_next_key
+    from .openai_key_rotation import get_key, is_initialized, is_openai_api_error, num_keys, rotate_key
 
     schema = _build_json_schema(cfg.expected_cluster_ids)
     LOG.info("Calling reflector (%s)...", cfg.reflector_model)
+    tries_left = num_keys() if is_initialized() else 1
     while True:
-        api_key = os.environ.get(cfg.openai_api_key_env)
+        api_key = get_key() if is_initialized() else os.environ.get(cfg.openai_api_key_env)
         if not api_key:
             raise RuntimeError(
                 f"Environment variable {cfg.openai_api_key_env} is not set"
@@ -170,10 +171,12 @@ def call_reflector(
             return json.loads(raw)
         except Exception as e:
             if is_initialized() and is_openai_api_error(e):
-                if not rotate_to_next_key():
+                tries_left -= 1
+                if tries_left <= 0:
                     raise RuntimeError(
                         "All OpenAI keys exhausted (reflector): %s" % e
                     ) from e
+                rotate_key()
                 continue
             raise
 

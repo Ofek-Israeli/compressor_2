@@ -112,7 +112,7 @@ def call_mutation_reflector(
     """Call the reflector for mutation. Returns (new_deltas_dict, new_scratchpad) or None on failure.
     On OpenAI API error, rotates to the next key and retries; if all keys exhausted, raises.
     """
-    from .openai_key_rotation import is_initialized, is_openai_api_error, rotate_to_next_key
+    from .openai_key_rotation import get_key, is_initialized, is_openai_api_error, num_keys, rotate_key
 
     user_content = MUTATION_USER_TEMPLATE.format(
         cluster_descriptions_json=json.dumps(cluster_descriptions, indent=2),
@@ -129,9 +129,10 @@ def call_mutation_reflector(
         log_reflector_call(messages, "mutation", generation, index, output_dir)
 
     expected_keys = set(current_deltas.keys())
+    tries_left = num_keys() if is_initialized() else 1
 
     while True:
-        api_key = os.environ.get(cfg.openai_api_key_env)
+        api_key = get_key() if is_initialized() else os.environ.get(cfg.openai_api_key_env)
         if not api_key:
             raise RuntimeError(f"Environment variable {cfg.openai_api_key_env} is not set")
         client = OpenAI(api_key=api_key)
@@ -179,10 +180,12 @@ def call_mutation_reflector(
 
             except Exception as e:
                 if is_initialized() and is_openai_api_error(e):
-                    if not rotate_to_next_key():
+                    tries_left -= 1
+                    if tries_left <= 0:
                         raise RuntimeError(
                             "All OpenAI keys exhausted (mutation reflector): %s" % e
                         ) from e
+                    rotate_key()
                     break
                 LOG.exception("Mutation reflector call failed (attempt %d)", attempt + 1)
         else:
@@ -247,7 +250,7 @@ def call_merge_reflector(
     """Call the reflector for scratchpad merge. Returns merged scratchpad string.
     On OpenAI API error, rotates to the next key and retries; if all keys exhausted, raises.
     """
-    from .openai_key_rotation import is_initialized, is_openai_api_error, rotate_to_next_key
+    from .openai_key_rotation import get_key, is_initialized, is_openai_api_error, num_keys, rotate_key
 
     user_content = MERGE_USER_TEMPLATE.format(
         fitness_a=f"{fitness_a:.4f}",
@@ -263,8 +266,9 @@ def call_merge_reflector(
     if output_dir is not None:
         log_reflector_call(messages, "merge", generation, index, output_dir)
 
+    tries_left = num_keys() if is_initialized() else 1
     while True:
-        api_key = os.environ.get(cfg.openai_api_key_env)
+        api_key = get_key() if is_initialized() else os.environ.get(cfg.openai_api_key_env)
         if not api_key:
             raise RuntimeError(f"Environment variable {cfg.openai_api_key_env} is not set")
         client = OpenAI(api_key=api_key)
@@ -284,10 +288,12 @@ def call_merge_reflector(
                 LOG.warning("Merge attempt %d: scratchpad not a string", attempt + 1)
             except Exception as e:
                 if is_initialized() and is_openai_api_error(e):
-                    if not rotate_to_next_key():
+                    tries_left -= 1
+                    if tries_left <= 0:
                         raise RuntimeError(
                             "All OpenAI keys exhausted (merge reflector): %s" % e
                         ) from e
+                    rotate_key()
                     break
                 LOG.exception("Merge reflector call failed (attempt %d)", attempt + 1)
         else:

@@ -59,6 +59,22 @@ config OUTPUT_DIR
 	  ga_fitness.png / evolution_tree.png (DEAP) or zero_order_fitness.png
 	  (zero-order), and logs.
 
+config VALIDATION_INDICES
+	string "Validation example indices (comma-separated, for validate-zero-order)"
+	default ""
+	help
+	  Comma-separated 0-based FinanceBench indices used as the validation set
+	  when running 'validate-zero-order'. Leave empty to require
+	  --validation-indices on the CLI.
+
+config VALIDATION_TOP_K
+	int "Number of top training-fitness instances to validate"
+	default 5
+	help
+	  When running validate-zero-order, how many of the best (by training
+	  fitness) entries from zero_order_history.jsonl to re-evaluate on
+	  the validation set.
+
 endmenu
 
 # ─────────────────────────────────────────────────────

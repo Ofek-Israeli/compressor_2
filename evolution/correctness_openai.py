@@ -40,7 +40,7 @@ def evaluate_one(
     """
     from openai import OpenAI
 
-    from .openai_key_rotation import is_initialized, is_openai_api_error, rotate_to_next_key
+    from .openai_key_rotation import get_key, is_initialized, is_openai_api_error, num_keys, rotate_key
 
     gt_str = ground_truth[0] if ground_truth else "N/A"
     prompt = f"""You are evaluating whether a predicted answer is correct.
@@ -60,8 +60,9 @@ RULES:
 Respond with JSON:
 {{"is_correct": true/false, "confidence": 0.0-1.0, "reasoning": "brief explanation"}}"""
 
+    tries_left = num_keys() if is_initialized() else 1
     while True:
-        api_key = os.environ.get(api_key_env)
+        api_key = get_key() if is_initialized() else os.environ.get(api_key_env)
         if not api_key:
             raise RuntimeError(
                 f"Environment variable {api_key_env} is not set (required for correctness evaluation)"
@@ -85,10 +86,12 @@ Respond with JSON:
                 )
         except Exception as e:
             if is_initialized() and is_openai_api_error(e):
-                if not rotate_to_next_key():
+                tries_left -= 1
+                if tries_left <= 0:
                     raise RuntimeError(
                         "All OpenAI keys exhausted (correctness): %s" % e
                     ) from e
+                rotate_key()
                 continue
             LOG.warning("Correctness evaluation failed: %s", e)
             return CorrectnessResult(

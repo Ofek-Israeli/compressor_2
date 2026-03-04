@@ -14,6 +14,7 @@ LOG = logging.getLogger(__name__)
 
 ZERO_ORDER_FITNESS_FILENAME = "zero_order_fitness.png"
 COORD_RD_GRAD_STATS_FILENAME = "zero_order_grad_stats.png"
+VALIDATION_FITNESS_FILENAME = "validation_fitness.png"
 
 
 def update_zero_order_fitness_graph(
@@ -241,3 +242,35 @@ def update_graph(
     fig.savefig(str(path), dpi=120, bbox_inches="tight")
     plt.close(fig)
     LOG.info("Graph updated: %s", path)
+
+
+def plot_validation_fitness(
+    rank_or_id: List[int],
+    validation_fitness: List[float],
+    output_path: Path,
+    title: str = "Validation fitness (top-k from history)",
+) -> None:
+    """Plot validation fitness for top-k candidates (e.g. rank or eval_id on x-axis)."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        LOG.warning("matplotlib not available; skipping validation_fitness.png")
+        return
+
+    if not rank_or_id or not validation_fitness or len(rank_or_id) != len(validation_fitness):
+        return
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.bar(rank_or_id, validation_fitness, color="C0", alpha=0.8, edgecolor="black", linewidth=0.5)
+    ax.set_xlabel("Rank (by training fitness)")
+    ax.set_ylabel("Validation fitness")
+    ax.set_title(title)
+    ax.grid(True, alpha=0.3, axis="y")
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(str(output_path), dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    LOG.info("Validation fitness graph saved: %s", output_path)

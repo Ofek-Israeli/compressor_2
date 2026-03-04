@@ -11,6 +11,8 @@ class EvolutionConfig:
     # --- Data paths ---
     financebench_jsonl: str = ""
     pool_indices: Optional[List[int]] = None  # None means "all"
+    validation_indices: Optional[List[int]] = None  # For validate-zero-order; None = must be provided via CLI
+    validation_top_k: int = 5  # Number of top training-fitness instances to validate
     cluster_descriptions_path: str = ""
     initial_deltas_path: str = ""
     initial_delta_value: float = 0.0

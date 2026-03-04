@@ -229,6 +229,38 @@ def cmd_generate_evolution_processors(args: argparse.Namespace) -> None:
     generate_evolution_processors(cfg, out_dir)
 
 
+def cmd_validate_zero_order(args: argparse.Namespace) -> None:
+    """Re-evaluate top-k from zero_order_history.jsonl on validation set; output graph and best processor path."""
+    import logging
+    from pathlib import Path
+    from .kconfig_loader import load_config
+    from .evolution.validate_zero_order import run_validation
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    cfg = load_config(args.config, validate_ga=False)
+    validation_indices = getattr(args, "validation_indices", None)
+    if validation_indices is not None:
+        # CLI comma-separated string -> list of ints
+        validation_indices = [int(i.strip()) for i in validation_indices.split(",") if i.strip()]
+    if not validation_indices and cfg.validation_indices:
+        validation_indices = cfg.validation_indices
+    if not validation_indices:
+        raise SystemExit(
+            "Validation indices required. Set CONFIG_VALIDATION_INDICES in .config or pass --validation-indices (e.g. 0,1,2,3,4)."
+        )
+    history_path = Path(args.history) if args.history else Path(cfg.output_dir) / "zero_order_history.jsonl"
+    top_k = getattr(args, "top_k", None) or cfg.validation_top_k
+    output_dir = Path(args.output_dir) if args.output_dir else Path(cfg.output_dir)
+    graph_path, best_processor_path = run_validation(
+        history_path, cfg, validation_indices, top_k, output_dir,
+    )
+    print("validation_graph:", graph_path)
+    print("best_processor:", best_processor_path)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="compressor_2",
@@ -628,6 +660,45 @@ def main() -> None:
         help="Evolution output directory (default: OUTPUT_DIR from config)",
     )
     p_gen_evol.set_defaults(func=cmd_generate_evolution_processors)
+
+    # validate-zero-order: re-evaluate top-k from history on validation set
+    p_validate = subparsers.add_parser(
+        "validate-zero-order",
+        help="Re-evaluate top-k training-fitness instances from zero_order_history.jsonl on a validation set; output graph and best processor path",
+    )
+    p_validate.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Path to .config file (same as for evolve)",
+    )
+    p_validate.add_argument(
+        "--history",
+        type=str,
+        default=None,
+        help="Path to zero_order_history.jsonl (default: OUTPUT_DIR/zero_order_history.jsonl)",
+    )
+    p_validate.add_argument(
+        "--top-k",
+        type=int,
+        default=None,
+        metavar="K",
+        help="Number of top training-fitness instances to validate (default: from config)",
+    )
+    p_validate.add_argument(
+        "--validation-indices",
+        type=str,
+        default=None,
+        metavar="IDX",
+        help="Comma-separated FinanceBench example indices for validation (e.g. 0,1,2,3,4)",
+    )
+    p_validate.add_argument(
+        "--output-dir",
+        type=str,
+        default=None,
+        help="Directory for validation graph and processor files (default: OUTPUT_DIR from config)",
+    )
+    p_validate.set_defaults(func=cmd_validate_zero_order)
 
     args = parser.parse_args()
     if hasattr(args, "func"):

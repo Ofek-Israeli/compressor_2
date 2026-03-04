@@ -1,14 +1,22 @@
 """
 OpenAI API key rotation for evolution: load keys from a file at start;
-on API errors, switch to the next key and retry. Exhausting all keys raises.
+on API errors, cycle to the next key and retry.  Exhausting all keys in
+a single request raises; the *next* request starts from wherever the
+cycle left off (so keys that recovered from rate-limits get retried).
+
+Thread-safe: all state is protected by a lock.
 """
 
 from __future__ import annotations
 
+import logging
 import os
+import threading
 from typing import List
 
-# Module-level state
+LOG = logging.getLogger(__name__)
+
+_lock = threading.Lock()
 _keys: List[str] = []
 _index: int = 0
 _env_var: str = "OPENAI_API_KEY"
@@ -38,23 +46,35 @@ def init_keys(filepath: str, env_var: str) -> None:
             f"OpenAI keys file is empty or has no valid lines: {path}. "
             "Add at least one API key (one per line)."
         )
-    _keys = raw
-    _index = 0
-    _env_var = env_var
-    os.environ[_env_var] = _keys[_index]
-
-
-def rotate_to_next_key() -> bool:
-    """
-    Switch to the next key in the list; update env. Return True if a next key
-    was set, False if all keys have been tried.
-    """
-    global _index
-    _index += 1
-    if _index < len(_keys):
+    with _lock:
+        _keys = raw
+        _index = 0
+        _env_var = env_var
         os.environ[_env_var] = _keys[_index]
-        return True
-    return False
+    LOG.info("Loaded %d OpenAI API key(s)", len(raw))
+
+
+def num_keys() -> int:
+    """Return the number of loaded keys."""
+    with _lock:
+        return len(_keys)
+
+
+def get_key() -> str:
+    """Return the current API key (thread-safe snapshot)."""
+    with _lock:
+        return _keys[_index]
+
+
+def rotate_key() -> str:
+    """Advance to the next key (cyclic wrap-around) and return it."""
+    global _index
+    with _lock:
+        prev = _index
+        _index = (_index + 1) % len(_keys)
+        os.environ[_env_var] = _keys[_index]
+        LOG.info("Rotated API key %d → %d (of %d)", prev + 1, _index + 1, len(_keys))
+        return _keys[_index]
 
 
 def is_openai_api_error(ex: BaseException) -> bool:
@@ -62,7 +82,6 @@ def is_openai_api_error(ex: BaseException) -> bool:
     mod = type(ex).__module__
     if mod.startswith("openai"):
         return True
-    # Explicitly allow common OpenAI exception names from openai package
     try:
         from openai import APIError, APIConnectionError, RateLimitError, APITimeoutError
         if isinstance(ex, (APIError, APIConnectionError, RateLimitError, APITimeoutError)):
@@ -74,4 +93,5 @@ def is_openai_api_error(ex: BaseException) -> bool:
 
 def is_initialized() -> bool:
     """True if init_keys has been called successfully (keys list non-empty)."""
-    return len(_keys) > 0
+    with _lock:
+        return len(_keys) > 0
