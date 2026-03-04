@@ -32,12 +32,12 @@ config CLUSTER_DESCRIPTIONS_PATH
 	help
 	  Path to cluster_descriptions.json (cluster id -> description).
 
-config INITIAL_DELTAS_PATH
-	string "Initial deltas JSON path"
-	default "outputs/deltas_examples.json"
+config INITIAL_DELTA_VALUE
+	string "Initial delta value for all clusters"
+	default "0.0"
 	help
-	  Path to the initial deltas JSON file (cluster id -> float).
-	  Used as the starting point for evolution.
+	  Starting delta applied to every cluster at the beginning of evolution.
+	  The number of dimensions is determined from the k-means model (KMEANS_PATH).
 
 config KMEANS_PATH
 	string "Fitted KMeans model (.joblib)"

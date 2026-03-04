@@ -13,6 +13,7 @@ class EvolutionConfig:
     pool_indices: Optional[List[int]] = None  # None means "all"
     cluster_descriptions_path: str = ""
     initial_deltas_path: str = ""
+    initial_delta_value: float = 0.0
     kmeans_path: str = ""
     embeddings_path: str = ""
     output_dir: str = "outputs/evolution"

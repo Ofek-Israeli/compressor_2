@@ -1,140 +1,133 @@
 {
   "0": {
-    "description": "EOS EOT",
+    "description": "The texts in this cluster consist solely of the word \"in,\" suggesting a theme focused on a preposition typically used to indicate inclusion, location, or position within something.",
     "example": [
-      "<EOS>",
-      "<EOT>"
+      "in",
+      "nn",
+      "net",
+      "In",
+      "Net",
+      "into",
+      "(in",
+      "in)",
+      "(In",
+      "inflow"
     ]
   },
   "1": {
-    "description": "Numbers, arithmetic operations (+, -, *, /), $, %, etc.",
+    "description": "The cluster consists of the repeated occurrence of the word \"is,\" highlighting its use as an auxiliary verb or linking word.",
     "example": [
-      "0",
-      "1",
-      "2",
-      "+",
-      "-",
-      "*",
-      "/",
-      "$",
-      "%",
-      "="
+      "is",
+      "its",
+      "are",
+      "was",
+      "not",
+      "has",
+      "is:",
+      "it's",
+      "does",
+      "It's"
     ]
   },
   "2": {
-    "description": "The cluster consists of repeated instances of the lowercase letter \"a\" with occasional uppercase \"A,\" highlighting uniformity with slight variation.",
+    "description": "This cluster consists entirely of the preposition \"of,\" indicating they are connected by a lack of context or meaning beyond the repeated use of this single word.",
     "example": [
-      "a",
-      "A",
-      "an"
+      "of",
+      "for",
+      "For",
+      "OF",
+      "FOR",
+      "(of",
+      "Of"
     ]
   },
   "3": {
-    "description": "The cluster focuses on financial terms related to income, particularly \"revenue\" and \"profits,\" indicating a theme centered on business earnings.",
+    "description": "This cluster contains repetitive placeholder text, indicating it might be for formatting or organizational purposes rather than conveying specific informative content.",
     "example": [
-      "revenue",
-      "financial",
-      "revenues",
-      "Income",
-      "income",
-      "sales",
-      "Revenue",
-      "cost",
-      "costs",
-      "expenses"
+      "to",
+      "that",
+      "as",
+      "=",
+      "by",
+      "on",
+      "which",
+      "from",
+      "with",
+      "be"
     ]
   },
   "4": {
-    "description": "The cluster revolves around operational and administrative activities within a corporate or industrial context, encompassing aspects such as financial management (P&L, savings), company departments (Activision, Blizzard), environmental and safety concerns (emissions, accidents), and opportunities for improvement and investigation.",
+    "description": "This cluster revolves around finance and business, focusing on topics related to financial activities and the operations of businesses.",
     "example": [
-      "cash",
-      "operating",
-      "current",
-      "Cash",
       "assets",
-      "flow",
-      "capital",
       "company's",
+      "income",
+      "operating",
+      "financial",
       "company",
-      "Flow"
+      "growth",
+      "cash",
+      "revenue",
+      "sales"
     ]
   },
   "5": {
-    "description": "The texts in this cluster all contain repeated occurrences of the acronym \"FY,\" which may represent a focus on fiscal year discussions or abbreviations.",
+    "description": "The cluster consists of two recurring concepts: \"recognition\" and \"answer.\"",
     "example": [
-      "FY",
-      "FY:",
-      "FY,",
-      "FY.",
-      "(FY",
-      "(FY):",
-      "FY)",
-      "((FY"
+      "Step",
+      "margin",
+      "$",
+      "current",
+      "answer",
+      "ratio",
+      "Question:n",
+      "Answer:n",
+      "final",
+      "more"
     ]
   },
   "6": {
-    "description": "The cluster consists of instances of the word \"of,\" without additional context or thematic content.",
+    "description": "This cluster consists entirely of the definite article \"the,\" indicating that it focuses on repeated instances of this common English word.",
     "example": [
-      "of"
+      "the",
+      "The",
+      "Therachon",
+      "(the",
+      "Therachon?nn"
     ]
   },
   "7": {
-    "description": "The texts in this cluster are placeholder text excerpts or intentionally left blank, often used for formatting or draft purposes.",
+    "description": "The cluster consists of fiscal years and financial figures, indicating a theme of financial reporting or budgeting over various years.",
     "example": [
-      ",",
-      "(,",
-      ",)",
-      "(),",
-      ",,",
-      ",.",
-      ",,.",
-      ",,)",
-      ".,",
-      "(,.)"
+      "a",
+      "total",
+      "million",
+      "Total",
+      "December",
+      "quarter",
+      "million.",
+      "FY2021",
+      "%",
+      "amount"
     ]
   },
   "8": {
-    "description": "The cluster consists of variations of the word \"to\" used in different contexts, though without specific context provided, making the purpose or theme unclear.",
+    "description": "The cluster contains identical text excerpts, each consisting solely of the conjunction \"and,\" highlighting a pattern of repetition of this single word.",
     "example": [
-      "to",
-      "To"
+      "and",
+      "also",
+      "&",
+      "AND",
+      "and/or"
     ]
   },
   "9": {
-    "description": "This cluster consists entirely of the word \"the,\" repeated multiple times, with no additional context or theme.",
+    "description": "End-of-sequence (EOS) and end-of-text (EOT) special tokens.",
     "example": [
-      "the",
-      "The"
-    ]
-  },
-  "10": {
-    "description": "This cluster revolves around mathematical and numerical concepts, focusing on quantities, calculations, and measurements.",
-    "example": [
-      "million",
-      "calculate",
-      "Total",
-      "ratio",
-      "total",
-      "Ratio",
-      "million.",
-      "Average",
-      "approximately",
-      "percentage"
-    ]
-  },
-  "11": {
-    "description": "The cluster seems to focus on discussions or references to agreements, proposals, and reports potentially involving a person or entity named Johnson, with an emphasis on summarizing or understanding these documents.",
-    "example": [
-      "and",
-      ".",
-      "in",
-      "for",
-      "is",
-      "we",
-      "on",
-      "from",
-      "that",
-      "as"
+      "<|endoftext|>",
+      "<|eot_id|>",
+      "<EOS>",
+      "<EOT>"
     ]
   }
 }

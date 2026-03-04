@@ -44,6 +44,39 @@ def load_text_units(text_path: str | Path, expected_len: int) -> list[str]:
     return _load_text_units(text_path, expected_len)
 
 
+def load_text_units_from_files(
+    file_paths: list[str] | list[Path],
+    expected_len: int,
+) -> list[str]:
+    """
+    Load multiple text files into a list of token strings (whitespace-split),
+    in file order. Same semantics as embed_files(): each file is read, split by
+    whitespace, and tokens are concatenated in order.
+
+    Args:
+        file_paths: Paths to text files (same order as when creating embeddings).
+        expected_len: Expected total number of units (must match labels / reduced rows).
+
+    Returns:
+        List of exactly expected_len strings.
+
+    Raises:
+        ValueError: If the total number of units does not match expected_len.
+    """
+    units: list[str] = []
+    for p in file_paths:
+        path = Path(p)
+        content = path.read_text(encoding="utf-8", errors="replace")
+        units.extend(content.split())
+    if len(units) != expected_len:
+        raise ValueError(
+            f"Text from embed-files has {len(units)} units but labels/reduced have {expected_len}. "
+            "The file list must yield the same number of units as the pipeline output, "
+            "in the same order. Use the same files as when creating embeddings (embed-files)."
+        )
+    return units
+
+
 def get_representatives(
     embeddings_path: str | Path,
     labels_path: str | Path,
@@ -92,12 +125,15 @@ def get_representatives(
                 f"embeddings.npy has {emb.shape[0]} rows but expected {N}."
             )
 
+    from sklearn.preprocessing import normalize as _l2_normalize
+    reduced_norm = _l2_normalize(reduced, norm="l2", axis=1)
+
     unique_labels = np.unique(labels)
     result: dict[int, list[str]] = {}
 
     for c in unique_labels:
         indices = np.where(labels == c)[0]
-        Z_c = reduced[indices]
+        Z_c = reduced_norm[indices]
         centroid_c = Z_c.mean(axis=0)
         dists = np.linalg.norm(Z_c - centroid_c, axis=1)
         top_local = np.argsort(dists)[:n]

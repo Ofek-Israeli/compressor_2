@@ -1,11 +1,13 @@
 """
-compressor_2: Embedding → PCA → K-means pipeline for token clustering.
+compressor_2: Embedding → PCA → Spherical K-means pipeline for token clustering.
 """
 
 from __future__ import annotations
 
+from typing import Union
+
 import numpy as np
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.decomposition import PCA
 
 from .embedder import embed_files, embed_tokens
@@ -35,28 +37,40 @@ def run_pipeline(
     *,
     embedding_model: str = "all-MiniLM-L6-v2",
     pca_d: int,
-    kmeans_k: int,
+    kmeans_k: int | None = None,
     random_state: int | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, PCA, KMeans]:
-    """
-    Run the full pipeline: embed tokens → PCA to d dimensions → k-means with k clusters.
+    spherical: bool = True,
+    k_min: int = 5,
+    k_max: int = 200,
+    n_seeds: int = 5,
+    device: str | None = "auto",
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, PCA, Union[KMeans, MiniBatchKMeans]]:
+    """Run the full pipeline: embed tokens -> PCA -> spherical k-means.
 
     Args:
         tokens: List of token strings to process.
         embedding_model: HuggingFace sentence-transformers model name.
         pca_d: Number of PCA components.
-        kmeans_k: Number of k-means clusters.
+        kmeans_k: Number of clusters.  None triggers auto-selection.
         random_state: Random state for PCA and KMeans (reproducibility).
+        spherical: L2-normalize before clustering (cosine k-means).
+        k_min, k_max: Range for auto-k search (when kmeans_k is None).
+        n_seeds: Seeds per candidate k for stability (when kmeans_k is None).
+        device: K-means device — ``"auto"`` | ``"cuda:N"`` | ``"cpu"``.
 
     Returns:
         (embeddings, reduced, labels, pca_fit, kmeans_fit)
-        - embeddings: (n, embed_dim) from embed_tokens
-        - reduced: (n, pca_d) from PCA
-        - labels: (n,) cluster indices from k-means
-        - pca_fit: fitted PCA object (e.g. to transform new data)
-        - kmeans_fit: fitted KMeans object (e.g. to predict new points)
     """
     X = embed_tokens(tokens, model_name=embedding_model)
     Z, pca = reduce_pca(X, d=pca_d, random_state=random_state)
-    labels, kmeans = cluster_kmeans(Z, k=kmeans_k, random_state=random_state)
+    labels, kmeans = cluster_kmeans(
+        Z,
+        k=kmeans_k,
+        random_state=random_state,
+        spherical=spherical,
+        k_min=k_min,
+        k_max=k_max,
+        n_seeds=n_seeds,
+        device=device,
+    )
     return X, Z, labels, pca, kmeans

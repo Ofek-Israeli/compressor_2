@@ -38,6 +38,89 @@ from .sglang_lifecycle import SGLangServer
 LOG = logging.getLogger(__name__)
 
 
+def _rebuild_from_history(
+    history_path: Path,
+    indices_hash: str,
+    method: str,
+) -> Optional[Dict[str, Any]]:
+    """Rebuild resume state from zero_order_history.jsonl when state file is missing.
+
+    Returns a dict compatible with zero_order_state.json fields, or None.
+    """
+    if not history_path.exists():
+        return None
+    best_x: Optional[List[float]] = None
+    best_f: Optional[float] = None
+    n_evals = 0
+    max_eval_id = -1
+    try:
+        with open(history_path, "r") as fp:
+            for line in fp:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if rec.get("indices_hash") != indices_hash:
+                    continue
+                n_evals = max(n_evals, rec.get("n_evals", 0))
+                eid = rec.get("eval_id", -1)
+                if eid > max_eval_id:
+                    max_eval_id = eid
+                f = rec.get("f")
+                if f is not None and rec.get("status") == "ok":
+                    if best_f is None or f > best_f:
+                        best_f = f
+                        best_x = rec.get("x")
+    except Exception:
+        LOG.warning("Failed to parse history for resume fallback")
+        return None
+    if n_evals == 0:
+        return None
+    return {
+        "method": method,
+        "n_evals_used": n_evals,
+        "best_x": best_x,
+        "best_f": best_f,
+        "indices_hash": indices_hash,
+        "max_eval_id": max_eval_id,
+    }
+
+
+def _load_plot_entries_from_history(
+    history_path: Path,
+    indices_hash: str,
+) -> List[Tuple[int, Optional[float], Optional[float]]]:
+    """Rebuild plot_entries list from zero_order_history.jsonl for graph continuity."""
+    entries: List[Tuple[int, Optional[float], Optional[float]]] = []
+    if not history_path.exists():
+        return entries
+    best_so_far: Optional[float] = None
+    try:
+        with open(history_path, "r") as fp:
+            for line in fp:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if rec.get("indices_hash") != indices_hash:
+                    continue
+                eid = rec.get("eval_id", 0)
+                f = rec.get("f")
+                if f is not None and rec.get("status") == "ok":
+                    if best_so_far is None or f > best_so_far:
+                        best_so_far = f
+                entries.append((eid, f if rec.get("status") == "ok" else None, best_so_far))
+    except Exception:
+        LOG.warning("Failed to load plot entries from history")
+    return entries
+
+
 def _validate_grid_combos(cfg: EvolutionConfig, d: int) -> None:
     """Validate grid total_combos against limits (requires d from cluster_ids)."""
     n_points = int(math.floor((cfg.grid_high - cfg.grid_low) / cfg.grid_step)) + 1
@@ -76,8 +159,8 @@ def run_zero_order_evolution(cfg: EvolutionConfig) -> None:
     )
 
     # ---- Load data ----
-    initial_deltas: Dict[str, float] = load_json(cfg.initial_deltas_path)
-    cluster_ids = sorted(initial_deltas.keys(), key=lambda x: int(x))
+    from .validate_artifacts import build_initial_deltas
+    initial_deltas, cluster_ids = build_initial_deltas(cfg)
     d = len(cluster_ids)
     cfg.expected_cluster_ids = cluster_ids
     LOG.info("Cluster IDs (%d): %s", d, cluster_ids)
@@ -170,8 +253,11 @@ def run_zero_order_evolution(cfg: EvolutionConfig) -> None:
     # ---- Dispatch ----
     optimizer_fn = get_optimizer(cfg.optimization_method)
 
-    # ---- Resume (load state if present) ----
+    # ---- Resume (load state if present, fallback to history) ----
     state_path = out_dir / "zero_order_state.json"
+    history_path = out_dir / "zero_order_history.jsonl"
+    resumed = False
+
     if state_path.exists():
         try:
             prev = load_json(str(state_path))
@@ -186,6 +272,7 @@ def run_zero_order_evolution(cfg: EvolutionConfig) -> None:
                     ctx.best_x = list(prev_best_x)
                     ctx.best_f = prev_best_f
                 ctx.n_evals = n_used
+                resumed = True
                 LOG.info(
                     "Resumed from zero_order_state.json: n_evals=%d, best_f=%s",
                     n_used, prev_best_f,
@@ -195,7 +282,33 @@ def run_zero_order_evolution(cfg: EvolutionConfig) -> None:
                     "State file found but method/hash mismatch; starting fresh"
                 )
         except Exception:
-            LOG.warning("Failed to load zero_order_state.json; starting fresh")
+            LOG.warning("Failed to load zero_order_state.json; trying history fallback")
+
+    if not resumed and history_path.exists():
+        prev = _rebuild_from_history(history_path, indices_hash, cfg.optimization_method)
+        if prev is not None:
+            n_used = prev.get("n_evals_used", 0)
+            prev_best_x = prev.get("best_x")
+            prev_best_f = prev.get("best_f")
+            if prev_best_x is not None:
+                x0 = [max(lo, min(hi, xi)) for xi in prev_best_x]
+                ctx.best_x = list(prev_best_x)
+                ctx.best_f = prev_best_f
+            ctx.n_evals = n_used
+            resumed = True
+            LOG.info(
+                "Resumed from zero_order_history.jsonl (fallback): n_evals=%d, best_f=%s",
+                n_used, prev_best_f,
+            )
+
+    if resumed:
+        loaded = _load_plot_entries_from_history(history_path, indices_hash)
+        if loaded:
+            plot_entries.extend(loaded)
+            max_prev_eid = max(e[0] for e in loaded)
+            ctx._eval_id_counter = max_prev_eid + 1
+        else:
+            ctx._eval_id_counter = ctx.n_evals
 
     # ---- SIGINT handler ----
     interrupted = False

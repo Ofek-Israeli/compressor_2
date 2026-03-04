@@ -100,11 +100,11 @@ def build_runner_config(
     indices: List[int],
     cfg: EvolutionConfig,
 ) -> str:
-    """Create a temp YAML runner config for the given example indices."""
+    """Load the runner config (YAML or Kconfig), patch it, and write a temp YAML."""
     import yaml
+    from financebench_runner.config import load_config as _load_runner_config
 
-    with open(base_config_path, "r") as f:
-        runner_cfg = yaml.safe_load(f)
+    runner_cfg = _load_runner_config(base_config_path)
     runner_cfg["example_indices"] = indices
     runner_cfg["concurrency"] = len(indices)
     runner_cfg["model_id"] = cfg.sglang_model_path

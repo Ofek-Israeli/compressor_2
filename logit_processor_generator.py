@@ -132,14 +132,22 @@ def generate_processor(
         pca = joblib.load(pca_path)
         logger.info("PCA loaded from %s (n_components=%s)", pca_path, pca.n_components_)
     else:
-        from .pca_reducer import reduce_pca
         X_train = np.load(embeddings_path)
-        logger.warning(
-            "No PCA joblib provided — re-fitting PCA(d=%s) from %s. "
-            "Results are only exact if the same solver/random_state were used originally.",
-            pca_d, embeddings_path,
-        )
-        _, pca = reduce_pca(X_train, d=pca_d, random_state=pca_random_state)
+        embed_dim = X_train.shape[1]
+        if pca_d == embed_dim:
+            pca = None
+            logger.info(
+                "KMeans dim (%d) == embedding dim (%d); skipping PCA (identity).",
+                pca_d, embed_dim,
+            )
+        else:
+            from .pca_reducer import reduce_pca
+            logger.warning(
+                "No PCA joblib provided — re-fitting PCA(d=%s) from %s. "
+                "Results are only exact if the same solver/random_state were used originally.",
+                pca_d, embeddings_path,
+            )
+            _, pca = reduce_pca(X_train, d=pca_d, random_state=pca_random_state)
 
     # ---- load tokenizer & decode vocab ----
     from transformers import AutoTokenizer
@@ -164,7 +172,10 @@ def generate_processor(
     X_vocab = embed_tokens(all_strings, model_name=embedding_model, batch_size=batch_size, device=device)
 
     # ---- PCA + KMeans ----
-    Z_vocab = pca.transform(X_vocab)
+    # Spherical k-means: L2-normalize before predict (matching training).
+    from sklearn.preprocessing import normalize as _l2_normalize
+    Z_vocab = pca.transform(X_vocab) if pca is not None else X_vocab
+    Z_vocab = _l2_normalize(Z_vocab, norm="l2", axis=1)
     clusters = kmeans.predict(Z_vocab)
     logger.info("Cluster assignment complete")
 

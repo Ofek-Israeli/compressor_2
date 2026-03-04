@@ -48,7 +48,10 @@ def describe_clusters(
 
     from openai import OpenAI
 
+    from sklearn.preprocessing import normalize as _l2_normalize
+
     client = OpenAI(api_key=api_key)
+    reduced_norm = _l2_normalize(reduced, norm="l2", axis=1)
     unique_labels = np.unique(labels)
     result: dict[int, dict] = {}
 
@@ -60,7 +63,7 @@ def describe_clusters(
 
         example = _top_words(text_units, indices, n=top_n_example)
 
-        Z_c = reduced[indices]
+        Z_c = reduced_norm[indices]
         centroid_c = Z_c.mean(axis=0)
         dists = np.linalg.norm(Z_c - centroid_c, axis=1)
         top_local = np.argsort(dists)[:max_texts_per_cluster]

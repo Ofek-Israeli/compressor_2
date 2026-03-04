@@ -82,11 +82,18 @@ def cmd_kmeans(args: argparse.Namespace) -> None:
     Z = np.load(args.input)
     n_init_arg = getattr(args, "n_init", "10")
     n_init = n_init_arg if n_init_arg == "auto" else int(n_init_arg)
+    k = getattr(args, "k", None)
+    spherical = not getattr(args, "no_spherical", False)
     labels, kmeans = cluster_kmeans(
         Z,
-        k=args.k,
+        k=k,
         random_state=args.random_state,
         n_init=n_init,
+        spherical=spherical,
+        k_min=getattr(args, "k_min", 5),
+        k_max=getattr(args, "k_max", 200),
+        n_seeds=getattr(args, "n_seeds", 5),
+        device=getattr(args, "device", "auto"),
     )
     _write_lines(args.output, [str(int(i)) for i in labels])
 
@@ -100,13 +107,19 @@ def cmd_kmeans(args: argparse.Namespace) -> None:
     # Optional: cluster descriptions via gpt-4o
     descriptions_out = getattr(args, "descriptions_out", None)
     if descriptions_out is not None:
+        embed_files = getattr(args, "embed_files", None)
         text_path = getattr(args, "text", None)
-        if text_path is None:
-            raise SystemExit("--descriptions-out requires --text (path to text file, same order as reduced).")
-        try:
+        if embed_files:
+            from .representatives import load_text_units_from_files
+            from .cluster_descriptions import describe_clusters
+            text_units = load_text_units_from_files(embed_files, len(labels))
+        elif text_path is not None:
             from .representatives import load_text_units
             from .cluster_descriptions import describe_clusters
             text_units = load_text_units(text_path, len(labels))
+        else:
+            raise SystemExit("--descriptions-out requires --text or --embed-files (same order as reduced).")
+        try:
             descriptions = describe_clusters(labels, Z, text_units)
             out = {str(k): v for k, v in descriptions.items()}
             descriptions_out.write_text(
@@ -151,8 +164,13 @@ def cmd_pipeline(args: argparse.Namespace) -> None:
         tokens,
         embedding_model=args.model,
         pca_d=args.d,
-        kmeans_k=args.k,
+        kmeans_k=getattr(args, "k", None),
         random_state=args.random_state,
+        spherical=not getattr(args, "no_spherical", False),
+        k_min=getattr(args, "k_min", 5),
+        k_max=getattr(args, "k_max", 200),
+        n_seeds=getattr(args, "n_seeds", 5),
+        device=getattr(args, "device", "auto"),
     )
     _write_lines(args.output, [str(int(i)) for i in labels])
     if args.embeddings_out:
@@ -341,9 +359,36 @@ def main() -> None:
     p_kmeans.add_argument(
         "-k",
         type=int,
-        required=True,
+        default=None,
         metavar="K",
-        help="Number of clusters",
+        help="Number of clusters (omit to auto-select via silhouette + stability)",
+    )
+    p_kmeans.add_argument(
+        "--k-min",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Min k for auto-selection (default: 5)",
+    )
+    p_kmeans.add_argument(
+        "--k-max",
+        type=int,
+        default=200,
+        metavar="N",
+        help="Max k for auto-selection (default: 200)",
+    )
+    p_kmeans.add_argument(
+        "--n-seeds",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Seeds per candidate k for stability (ARI) measurement (default: 5)",
+    )
+    p_kmeans.add_argument(
+        "--no-spherical",
+        action="store_true",
+        default=False,
+        help="Disable L2-normalization (plain Euclidean k-means, old behavior)",
     )
     p_kmeans.add_argument(
         "--model-out",
@@ -360,16 +405,30 @@ def main() -> None:
         help="K-means runs with different seeds (default: 10); use 'auto' for sklearn default",
     )
     p_kmeans.add_argument(
+        "--device",
+        type=str,
+        default="auto",
+        help="Device for k-means: 'auto' (GPU if available), 'cuda:0', 'cuda:1', or 'cpu'.",
+    )
+    p_kmeans.add_argument(
         "--text",
         type=Path,
         default=None,
-        help="Text file (whitespace-split tokens, same order/length as reduced). Required for --descriptions-out.",
+        help="Text file (whitespace-split tokens, same order/length as reduced). For --descriptions-out (or use --embed-files for multiple files).",
+    )
+    p_kmeans.add_argument(
+        "--embed-files",
+        nargs="+",
+        type=Path,
+        metavar="FILE",
+        default=None,
+        help="Text files (whitespace-split tokens, same order as reduced). Alternative to --text for --descriptions-out. Same semantics as embed-files.",
     )
     p_kmeans.add_argument(
         "--descriptions-out",
         type=Path,
         default=None,
-        help="Write cluster descriptions (JSON) via gpt-4o. Requires --text and OPENAI_API_KEY.",
+        help="Write cluster descriptions (JSON) via gpt-4o. Requires --text or --embed-files and OPENAI_API_KEY.",
     )
     p_kmeans.set_defaults(func=cmd_kmeans)
 
@@ -404,15 +463,25 @@ def main() -> None:
     p_pipe.add_argument(
         "-k",
         type=int,
-        required=True,
+        default=None,
         metavar="K",
-        help="Number of k-means clusters",
+        help="Number of k-means clusters (omit to auto-select)",
     )
+    p_pipe.add_argument("--k-min", type=int, default=5, metavar="N", help="Min k for auto-selection (default: 5)")
+    p_pipe.add_argument("--k-max", type=int, default=200, metavar="N", help="Max k for auto-selection (default: 200)")
+    p_pipe.add_argument("--n-seeds", type=int, default=5, metavar="N", help="Seeds for stability measurement (default: 5)")
+    p_pipe.add_argument("--no-spherical", action="store_true", default=False, help="Disable L2-normalization")
     p_pipe.add_argument("--embeddings-out", type=Path, default=None, help="Save embeddings .npy")
     p_pipe.add_argument("--reduced-out", type=Path, default=None, help="Save reduced .npy")
     p_pipe.add_argument("--pca-out", type=Path, default=None, help="Save fitted PCA (joblib)")
     p_pipe.add_argument("--kmeans-out", type=Path, default=None, help="Save fitted KMeans (joblib)")
     p_pipe.add_argument("--random-state", type=int, default=None, help="Random seed")
+    p_pipe.add_argument(
+        "--device",
+        type=str,
+        default="auto",
+        help="Device for k-means: 'auto' (GPU if available), 'cuda:0', 'cuda:1', or 'cpu'.",
+    )
     p_pipe.set_defaults(func=cmd_pipeline)
 
     # representatives
